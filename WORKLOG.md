@@ -24,6 +24,15 @@ to evolve deliberately.
 - No destructive or disruptive changes without explicit approval.
 - Distinguish verified facts from assumptions and open questions.
 
+## Collaboration workflow
+
+- Make ongoing AI-assisted changes on branch `ai`; merge into `main` at the daily
+  collaboration checkpoint. Earlier published commits remain in existing history.
+- Read-only inspection is authorized. Show diagnostic commands before execution
+  and report useful results so the owner can follow the work.
+- This does not authorize consequential infrastructure changes or publishing
+  sensitive operational information.
+
 ## Active priority: Hermes playbook recovery
 
 The immediate acceptance criterion is a successful run of the existing `hermes.yaml`.
