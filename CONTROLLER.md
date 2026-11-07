@@ -45,6 +45,18 @@ git apply --unidiff-zero --check patches/create-vm-explicit-id-and-firmware.patc
 git apply --unidiff-zero patches/create-vm-explicit-id-and-firmware.patch
 ```
 
+`patches/eddie-entrypoint.patch` records the playbook naming, explicit firmware
+selection, verified host-key refresh, and authenticated-connection wait. It was
+checked against the preserved historical `hermes.yaml`; after applying it to an
+unmodified import, rename that file to `eddie.yaml`.
+
+The `proxmox/ssh_host_key` role verifies VM and guest identity over the trusted
+hypervisor connection, reads public host keys through the guest agent, backs up
+the workstation's trust file privately, and refreshes only the verified guest's
+entries. It leaves SSH verification enabled. An accessible guest agent and static
+IPv4 cloud-init configuration are required. It does not change system-wide SSH
+trust stores or IPA-managed SSH configuration.
+
 The local `rebuild_eddie.yaml` is a one-time destructive entry point. Ordinary
 reruns use `eddie.yaml`. Do not rerun the rebuild entry point to troubleshoot a
 partially configured replacement; its expected-old-name guard deliberately

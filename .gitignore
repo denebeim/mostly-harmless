@@ -239,6 +239,7 @@ __marimo__/
 /roles/proxmox/*
 !/roles/proxmox/rebuild_vm/
 !/roles/proxmox/firmware/
+!/roles/proxmox/ssh_host_key/
 !/collections/
 /collections/*
 !/collections/requirements.yml

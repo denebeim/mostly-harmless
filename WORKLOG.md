@@ -113,6 +113,15 @@ applying it to an isolated copy of the preserved source reproduced the local
 role exactly. Subsequent retries use the ordinary playbook, not the destructive
 rebuild entry point. Clean playbook completion remains pending.
 
+Added a reusable Ansible host-key refresh for rebuilt guests. It checks VM and
+guest identity through the trusted hypervisor, reads public keys through the
+guest agent, privately backs up the workstation trust file, and updates only
+the verified guest's entries. Authenticated SSH access passed with verification
+enabled. A privacy-reviewed entry-point patch reproduces the corresponding
+local playbook changes. Progress is mirrored into an ignored local log so the
+owner can observe runs; full diagnostic output remains private. The overall
+playbook has not yet completed successfully.
+
 ## Session log
 
 ### 2026-11-07 — Project baseline and Eddie recovery
