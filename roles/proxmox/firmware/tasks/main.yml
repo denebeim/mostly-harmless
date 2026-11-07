@@ -1,0 +1,41 @@
+---
+- name: Require explicit UEFI firmware and storage choices
+  ansible.builtin.assert:
+    that:
+      - bios == 'ovmf'
+      - machine == 'q35'
+      - storage | length > 0
+      - newid | int > 0
+
+- name: Read existing firmware configuration
+  ansible.builtin.command:
+    argv:
+      - pvesh
+      - get
+      - /nodes/{{ inventory_hostname }}/qemu/{{ newid }}/config
+      - --output-format
+      - json
+  register: firmware_config
+  changed_when: false
+  no_log: true
+
+- name: Configure requested firmware and add EFI state only when missing
+  community.general.proxmox_kvm:
+    api_host: "{{ api_host }}"
+    api_user: "{{ api_user }}"
+    api_password: "{{ api_password }}"
+    node: "{{ inventory_hostname }}"
+    vmid: "{{ newid }}"
+    update: true
+    update_unsafe: true
+    bios: "{{ bios }}"
+    machine: "{{ machine }}"
+    efidisk0: >-
+      {{ {'storage': storage, 'format': 'qcow2', 'efitype': '4m',
+          'pre_enrolled_keys': false}
+         if 'efidisk0' not in (firmware_config.stdout | from_json) else omit }}
+  when: >-
+    (firmware_config.stdout | from_json).bios | default('seabios') != bios or
+    (firmware_config.stdout | from_json).machine | default('pc') != machine or
+    'efidisk0' not in (firmware_config.stdout | from_json)
+  no_log: true

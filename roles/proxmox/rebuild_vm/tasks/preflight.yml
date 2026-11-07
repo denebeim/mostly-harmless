@@ -1,0 +1,89 @@
+- name: Require explicit approval and a reviewed disposable guest
+  ansible.builtin.assert:
+    that:
+    - rebuild_approved | default(false) | bool
+    - rebuild_data_reviewed | default(false) | bool
+    - rebuild_vmid | int > 0
+    - rebuild_expected_name | length > 0
+    - rebuild_new_name | length > 0
+    - rebuild_new_name != rebuild_expected_name
+    - rebuild_storage | length > 0
+    - rebuild_clone | length > 0
+    fail_msg: Rebuild requires explicit approval, a data review, and an exact target.
+- name: Read available guests and templates before removing anything
+  ansible.builtin.command:
+    argv:
+    - pvesh
+    - get
+    - /cluster/resources
+    - --type
+    - vm
+    - --output-format
+    - json
+  register: rebuild_resources
+  changed_when: false
+  no_log: true
+- name: Verify the source template and unused replacement name
+  ansible.builtin.assert:
+    that:
+    - rebuild_resources.stdout | from_json | selectattr('name', 'defined') | selectattr('name', 'equalto', rebuild_clone)
+      | list | length == 1
+    - (rebuild_resources.stdout | from_json | selectattr('name', 'defined') | selectattr('name', 'equalto', rebuild_clone)
+      | first).template | default(0) | int == 1
+    - rebuild_resources.stdout | from_json | selectattr('name', 'defined') | selectattr('name', 'equalto', rebuild_new_name)
+      | list | length == 0
+    fail_msg: The reviewed source template or replacement name is unavailable.
+  no_log: true
+- name: Read the requested storage definition
+  ansible.builtin.command:
+    argv:
+    - pvesh
+    - get
+    - /storage/{{ rebuild_storage }}
+    - --output-format
+    - json
+  register: rebuild_storage_config
+  changed_when: false
+  no_log: true
+- name: Read storage availability on this node
+  ansible.builtin.command:
+    argv:
+    - pvesh
+    - get
+    - /nodes/{{ inventory_hostname }}/storage/{{ rebuild_storage }}/status
+    - --output-format
+    - json
+  register: rebuild_storage_status
+  changed_when: false
+  no_log: true
+- name: Require the selected NFS storage to be active and support VM images
+  ansible.builtin.assert:
+    that:
+    - (rebuild_storage_config.stdout | from_json).type == 'nfs'
+    - (rebuild_storage_status.stdout | from_json).active | int == 1
+    - '''images'' in (rebuild_storage_config.stdout | from_json).content.split('','')'
+    fail_msg: The selected NFS image storage is unavailable.
+  no_log: true
+- name: Read the exact target configuration
+  ansible.builtin.command:
+    argv:
+    - pvesh
+    - get
+    - /nodes/{{ inventory_hostname }}/qemu/{{ rebuild_vmid }}/config
+    - --output-format
+    - json
+  register: rebuild_config
+  changed_when: false
+  no_log: true
+- name: Refuse a different guest, template, passthrough device, or extra disk
+  ansible.builtin.assert:
+    that:
+    - (rebuild_config.stdout | from_json).name == rebuild_expected_name
+    - not ((rebuild_config.stdout | from_json).template | default(false) | bool)
+    - (rebuild_config.stdout | from_json).scsi0.startswith(rebuild_storage ~ ':')
+    - (rebuild_config.stdout | from_json).keys() | select('match', '^(hostpci|usb|unused)[0-9]+$') | list | length
+      == 0
+    - (rebuild_config.stdout | from_json).keys() | select('match', '^(scsi|sata|virtio|ide)[0-9]+$') | difference(rebuild_allowed_disks)
+      | length == 0
+    fail_msg: Target configuration differs from the reviewed disposable guest.
+  no_log: true

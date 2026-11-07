@@ -95,6 +95,17 @@ changing template IDs. Existing scripts require review before execution because
 they delete the supplied target VM before creation. No image build is authorized
 by this backlog entry alone.
 
+## Recovery scope update
+
+The owner requested an Ansible-driven rebuild after read-only inspection for
+valuable guest data, with the replacement named Eddie and existing NFS placement
+preserved. The initial playbook run was stopped at that request; it did not reach
+clean completion. Generic rebuild and firmware roles are now reviewable in Git.
+The rebuild is explicitly gated, checks the target and source template, refuses
+unexpected devices, records configuration privately, and checks for concurrent
+configuration edits before deletion. Its tagged read-only preflight passed.
+Operational entry points and full inspection logs remain ignored locally.
+
 ## Session log
 
 ### 2026-11-07 — Project baseline and Eddie recovery
