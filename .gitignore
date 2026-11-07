@@ -218,3 +218,26 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Imported operational configuration stays local until privacy review.
+/*
+!/.gitignore
+!/LICENSE
+!/WORKLOG.md
+!/ansible.cfg
+!/requirements.txt
+!/requirements-controller.lock.txt
+!/CONTROLLER.md
+!/inventory/
+/inventory/*
+!/inventory/proxmox.py
+!/roles/
+/roles/*
+!/roles/requirements.yml
+!/collections/
+/collections/*
+!/collections/requirements.yml
+!/modules/
+/modules/*
+!/modules/requirements.txt
+!/modules/requirements.yml

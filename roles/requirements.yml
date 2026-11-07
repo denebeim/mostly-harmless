@@ -1,0 +1,12 @@
+---
+roles:
+  - name: geerlingguy.docker
+    version: 8.0.0
+  - name: geerlingguy.kubernetes
+    version: 8.2.0
+  - name: nginxinc.nginx_config
+    version: 0.7.1
+  - name: geerlingguy.containerd
+    version: 1.4.1
+  - name: geerlingguy.helm
+    version: 1.0.1

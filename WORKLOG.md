@@ -128,6 +128,36 @@ No configuration changes are authorized by this investigation list alone.
 - Also found YAML output where the Ansible script inventory interface expects
   JSON. No corrections made yet; existing inventory edits remain preserved.
 
+### 2026-11-07 — Working configuration imported and clean controller established
+
+- At the owner's direction, imported 216 existing regular configuration/support
+  files into this checkout at the repository root. Preserved the historical
+  checkout, its existing edits, and its Python environment. Did not copy its Git
+  metadata, virtualenvs, generated dependency trees, certificates, or private key.
+- Imported both existing Python requirement files, both Galaxy manifests, and
+  the empty modules Galaxy manifest. Built a fresh `.venv` with Python 3.12.4;
+  installed the actual Python requirements and recorded resolved versions in
+  `requirements-controller.lock.txt`. `pip check` passed; Ansible core is 2.21.6.
+- Installed all five pinned Galaxy roles and all six collection entries into
+  ignored project-local directories. The inherited Git collection entry tracks
+  `master`; its lack of an immutable pin is documented in `CONTROLLER.md`.
+- Configured the intended dynamic script directly and project-local controller
+  cache/temp paths. Migrated only needed connection environment assignments to
+  an ignored mode-0600 local file, using the new Python environment.
+- Corrected inventory JSON output, optional filter defaults, missing-template
+  handling, and node inclusion in this checkout only. The real API query and
+  Ansible inventory parsing succeeded; both playbook targets are recognized.
+  An offline check covers explicit/missing template flags and template exclusion.
+- The imported playbook passed syntax checking through the intended dynamic
+  inventory. Existing group-name warnings remain; no group renaming was attempted.
+- Public tracking is restricted to reviewed controller configuration, generic
+  inventory code, manifests, and documentation. Imported operational playbooks,
+  roles, inventory data, and deployments remain local and ignored pending privacy
+  review. They are not backed up by the public remote; this migration is not yet a
+  complete reproducible public configuration backup.
+- No infrastructure-changing tasks have run. The next gate is review of the
+  existing playbook's consequential provisioning and guest configuration effects.
+
 ## How to maintain this log
 
 At each meaningful work milestone, update:
