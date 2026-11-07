@@ -109,6 +109,25 @@ No configuration changes are authorized by this investigation list alone.
   inspection or playbook execution. Sensitive inventory/topology details remain out
   of this public log.
 
+### 2026-11-07 — Intended dynamic inventory traced
+
+- Owner clarified that `inventory/proxmox.py` in the historical checkout is the
+  intended inventory generator. The static inventory used for syntax checking is
+  not authoritative for this workflow.
+- Confirmed `ansible.cfg` selects the whole inventory directory, rather than the
+  script alone; multiple inventory sources can therefore participate.
+- Read the full script before execution. Its infrastructure calls retrieve API
+  and guest-agent information; no infrastructure write calls were found.
+- Direct `--list` invocation failed locally because the shebang-selected Python
+  lacks `six`. Explicit invocation with the checkout virtual environment passed
+  that import and failed with `KeyError: 'include'` while loading configuration.
+  Neither invocation reached API authentication or generated inventory.
+- The sibling JSON has an inventory-shaped top-level `all` key rather than the
+  connection settings expected by the script. Required connection environment
+  variables were absent in the tested shell. Values and credentials were not logged.
+- Also found YAML output where the Ansible script inventory interface expects
+  JSON. No corrections made yet; existing inventory edits remain preserved.
+
 ## How to maintain this log
 
 At each meaningful work milestone, update:
