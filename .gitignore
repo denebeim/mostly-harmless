@@ -228,6 +228,7 @@ __marimo__/
 !/requirements.txt
 !/requirements-controller.lock.txt
 !/CONTROLLER.md
+!/patches/
 !/inventory/
 /inventory/*
 !/inventory/proxmox.py

@@ -106,6 +106,13 @@ unexpected devices, records configuration privately, and checks for concurrent
 configuration edits before deletion. Its tagged read-only preflight passed.
 Operational entry points and full inspection logs remain ignored locally.
 
+The first reproducible provisioning failure was a cloud-init network update
+without an explicit VM ID. Added the existing target-ID variable to that task.
+A public, privacy-reviewed patch records this correction and the firmware hook;
+applying it to an isolated copy of the preserved source reproduced the local
+role exactly. Subsequent retries use the ordinary playbook, not the destructive
+rebuild entry point. Clean playbook completion remains pending.
+
 ## Session log
 
 ### 2026-11-07 — Project baseline and Eddie recovery

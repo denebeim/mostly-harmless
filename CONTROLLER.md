@@ -34,6 +34,22 @@ Generated environments, installed roles/collections, and controller caches are
 also ignored. The public allowlist currently covers only reviewed controller
 configuration, manifests, the generic inventory generator, and documentation.
 
+`patches/create-vm-explicit-id-and-firmware.patch` records the small changes to
+the ignored historical provisioning role. It adds an explicit ID to cloud-init
+network updates and invokes the versioned firmware role only when requested.
+The patch was verified against the preserved source and reproduces the local
+role changes exactly. Apply it only to an unmodified import of that source:
+
+```bash
+git apply --unidiff-zero --check patches/create-vm-explicit-id-and-firmware.patch
+git apply --unidiff-zero patches/create-vm-explicit-id-and-firmware.patch
+```
+
+The local `rebuild_eddie.yaml` is a one-time destructive entry point. Ordinary
+reruns use `eddie.yaml`. Do not rerun the rebuild entry point to troubleshoot a
+partially configured replacement; its expected-old-name guard deliberately
+refuses that replacement.
+
 Before running `eddie.yaml`, review its provisioning and guest-configuration
 effects with the owner. It can resize disks, reconfigure a VM, upgrade guest
 packages, enroll identity, and change Docker and agent services. A successful
