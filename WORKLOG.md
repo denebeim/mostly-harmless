@@ -24,7 +24,12 @@ to evolve deliberately.
 - No destructive or disruptive changes without explicit approval.
 - Distinguish verified facts from assumptions and open questions.
 
-## Active priority: Eddie
+## Active priority: Hermes playbook recovery
+
+The immediate acceptance criterion is a successful run of the existing `hermes.yaml`.
+Keep the existing VM name. Inspect actual dependencies and side effects, then address
+one meaningful failure at a time with the smallest reproducible correction.
+The historical survey below is context, not a statement of current live state.
 
 The immediate goal is to restore the primary agent VM (formerly called Hermes; now referred to
 as Eddie) to useful operation, then use it as the primary local agent with access to external
@@ -43,11 +48,10 @@ AI models as needed.
 
 ### Next investigation
 
-1. Inspect the running QEMU command lines for Plex and Eddie.
-2. Inspect Proxmox configuration backups for historical PCI assignments.
-3. Reconstruct the last known working GPU-to-Eddie configuration.
-4. Check IOMMU grouping and device isolation before making any changes.
-5. Make the smallest justified change, with explicit approval, then verify GPU access in Eddie.
+1. Review the fresh read-only survey with the owner and clarify unfamiliar VMs.
+2. Finish tracing the existing Hermes playbook, inventory, variables, and dependencies.
+3. Review consequential side effects with the owner before an infrastructure-changing run.
+4. Run the playbook within the approved scope and address the first meaningful failure.
 
 No configuration changes are authorized by this investigation list alone.
 
@@ -82,6 +86,28 @@ No configuration changes are authorized by this investigation list alone.
   evidence to inspect.
 - No infrastructure changes made during this investigation.
 - Next action: inspect Proxmox GPU history and running QEMU command lines.
+
+### 2026-11-07 — Desktop inspection and fresh read-only survey
+
+- Read the full recovery handoff and confirmed local shell/filesystem access.
+- Located the reference playbook in the separate historical configuration checkout,
+  on branch `ai`; it has existing inventory modifications, which were preserved.
+- Confirmed the canonical checkout initially contained only project baseline files.
+- Verified the historical checkout's existing virtual environment uses Ansible core
+  2.21.5. A syntax-only playbook check passed with the static inventory, but neither
+  playbook target matched that inventory. No playbook tasks were executed.
+- Inspection found provisioning, VM reconfiguration, disk resizing, guest package
+  upgrades, identity enrollment, Docker configuration, and agent installation/service
+  management in the dependency chain. Execution requires scope review first.
+- At the owner's request, performed a fresh read-only SSH survey using existing
+  credentials. Verified Debian 12, Proxmox 8.2.4, kernel 6.8.8-1-pve, a Supermicro
+  X10DAI motherboard, dual Xeon E5-2680 v4 CPUs, and 188 GiB RAM.
+- The VM list and running/stopped states matched the historical handoff. The target
+  is running; the list reports 16 GiB RAM and a 40 GB boot disk. This does not resolve
+  the historical discrepancy with the saved VM configuration.
+- No infrastructure changes made. Paused for the owner's VM context before further
+  inspection or playbook execution. Sensitive inventory/topology details remain out
+  of this public log.
 
 ## How to maintain this log
 
