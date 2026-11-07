@@ -85,6 +85,16 @@ No configuration changes are authorized by this investigation list alone.
 - `mostly-harmless`: the new project and intended source of truth for reproducible Deepthot
   infrastructure, automation, scripts, services, and documentation.
 
+## Follow-up: golden images
+
+After Eddie recovery, rewrite the existing image-building scripts for five
+Deepthot-configured targets: Ubuntu 24.04 LTS and 26.04 LTS, current Debian, and
+current and previous Rocky Linux. The owner explicitly selected the Ubuntu LTS pair.
+Preserve the existing storage placement; review numbering before allocating or
+changing template IDs. Existing scripts require review before execution because
+they delete the supplied target VM before creation. No image build is authorized
+by this backlog entry alone.
+
 ## Session log
 
 ### 2026-11-07 — Project baseline and Eddie recovery
