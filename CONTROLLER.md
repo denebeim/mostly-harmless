@@ -34,7 +34,7 @@ Generated environments, installed roles/collections, and controller caches are
 also ignored. The public allowlist currently covers only reviewed controller
 configuration, manifests, the generic inventory generator, and documentation.
 
-Before running `hermes.yaml`, review its provisioning and guest-configuration
+Before running `eddie.yaml`, review its provisioning and guest-configuration
 effects with the owner. It can resize disks, reconfigure a VM, upgrade guest
 packages, enroll identity, and change Docker and agent services. A successful
 inventory or syntax check does not authorize those changes.

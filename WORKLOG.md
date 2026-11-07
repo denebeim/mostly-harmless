@@ -32,10 +32,13 @@ to evolve deliberately.
   and report useful results so the owner can follow the work.
 - This does not authorize consequential infrastructure changes or publishing
   sensitive operational information.
+- Use Eddie as the project-facing agent name. The local playbook entry point is
+  now `eddie.yaml`; the existing machine identity and upstream software names are
+  preserved. The renamed operational file remains ignored pending privacy review.
 
-## Active priority: Hermes playbook recovery
+## Active priority: Eddie playbook recovery
 
-The immediate acceptance criterion is a successful run of the existing `hermes.yaml`.
+The immediate acceptance criterion is a successful run of the existing playbook, now named `eddie.yaml`.
 Keep the existing VM name. Inspect actual dependencies and side effects, then address
 one meaningful failure at a time with the smallest reproducible correction.
 The historical survey below is context, not a statement of current live state.
@@ -58,7 +61,7 @@ AI models as needed.
 ### Next investigation
 
 1. Review the fresh read-only survey with the owner and clarify unfamiliar VMs.
-2. Finish tracing the existing Hermes playbook, inventory, variables, and dependencies.
+2. Finish tracing the existing Eddie playbook, inventory, variables, and dependencies.
 3. Review consequential side effects with the owner before an infrastructure-changing run.
 4. Run the playbook within the approved scope and address the first meaningful failure.
 
