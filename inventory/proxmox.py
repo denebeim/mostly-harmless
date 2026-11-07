@@ -173,7 +173,7 @@ class ProxmoxAPI(object):
             headers['Cookie'] = 'PVEAuthCookie={0}'.format(self.credentials['ticket'])
         else:
             headers['Authorization'] = 'PVEAPIToken={0}!{1}={2}'.format(self.options.username, self.options.token, self.options.secret)
-        
+
         request = open_url(request_path, data=data, headers=headers,
                            validate_certs=self.options.validate)
 
@@ -212,7 +212,7 @@ class ProxmoxAPI(object):
 
     def pool(self, poolid):
         return ProxmoxPool(self.get('api2/json/pools/{0}'.format(poolid)))
-    
+
     def qemu_agent(self, node, vm):
         try:
             info = self.get('api2/json/nodes/{0}/qemu/{1}/agent/info'.format(node, vm))
@@ -234,7 +234,7 @@ class ProxmoxAPI(object):
         except:
             return False
 
-### PATCH for LXC HOSTNAME 
+### PATCH for LXC HOSTNAME
 ### GET HOSTNAME for LXC-Containers
 
     def lxc_hostname(self, node, vm):
@@ -242,13 +242,13 @@ class ProxmoxAPI(object):
             config = self.get('api2/json/nodes/{0}/lxc/{1}/config'.format(node, vm))
         except HTTPError:
             return False
-        
+
         try:
             hostname = config['hostname']
             return hostname
         except:
             return False
-    
+
     def version(self):
         return ProxmoxVersion(self.get('api2/json/version'))
 
@@ -273,7 +273,7 @@ class ProxmoxAPI(object):
 
         ip_address = None
         networks = self.get('api2/json/nodes/{0}/qemu/{1}/agent/network-get-interfaces'.format(node, vm))['result']
-        
+
         if networks:
             if type(networks) is dict:
                 for network in networks:
@@ -300,20 +300,20 @@ class ProxmoxAPI(object):
     def valid_network_interface(self, network):
         if 'ip-addresses' not in network:
             return False
-        
+
         # Include/Exclude are mutally exclusive
         if len(self.options.include) > 0:
             for regex in self.options.include:
                 if re.match(regex, network["name"]):
                     return True
             return False
-        
+
         if len(self.options.exclude) > 0:
             for regex in self.options.exclude:
                 if re.match(regex, network["name"]):
                     return False
             return True
-        
+
         return True
 
 class SystemInfo(object):
@@ -388,7 +388,7 @@ def main_list(options, config_path):
                 metadata = {
                     'notes': description
                 }
-            
+
             if type == 'qemu':
                 # Retrieve information from QEMU agent if installed
                 if proxmox_api.qemu_agent(node, vmid):
@@ -448,7 +448,7 @@ def main_list(options, config_path):
                     results[tag_list[i]]['hosts'] += [vm]
             except KeyError:
                 pass
-           
+
             results['_meta']['hostvars'][vm].update(metadata)
 
     # pools
