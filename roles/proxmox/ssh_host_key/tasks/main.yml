@@ -83,8 +83,9 @@
 - name: Preserve the controller trust file privately
   ansible.builtin.copy:
     src: "{{ ssh_controller_file }}"
-    dest: "{{ playbook_dir }}/.ansible/known-hosts-backups/{{ now(utc=true, fmt='%Y%m%dT%H%M%S%f') }}"
+    dest: "{{ playbook_dir }}/.ansible/known-hosts-backups/{{ newid }}-{{ ssh_verified_keys | join('') | hash('sha256') }}"
     mode: '0600'
+    force: false
   when: ssh_controller_file_stat.stat.exists
   delegate_to: localhost
   become: false

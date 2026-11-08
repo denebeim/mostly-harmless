@@ -234,3 +234,7 @@
     name: hermes-cron.timer
     enabled: "{{ hermes_cron_enabled | bool }}"
     state: "{{ 'started' if hermes_cron_enabled | bool else 'stopped' }}"
+
+- name: Check the configured local inference path
+  ansible.builtin.include_tasks: verify.yml
+  when: hermes_provider == 'custom'

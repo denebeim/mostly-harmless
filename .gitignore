@@ -270,3 +270,16 @@ __marimo__/
 !/tests/
 /tests/*
 !/tests/test_review_guards.py
+
+# Shared VM lifecycle and reviewed application roles.
+!/vm.yaml
+!/create_vm.yaml
+!/join_deepthot.yaml
+!/install_docker.yaml
+!/roles/machines/base/
+!/roles/machines/gpu/
+!/roles/machines/ollama/
+!/tests/test_vm_lifecycle.py
+!/scripts/
+/scripts/*
+!/scripts/log-session.py

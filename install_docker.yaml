@@ -1,0 +1,8 @@
+---
+- name: Install Docker only on tagged guests
+  hosts: "{{ vm.name | default('tag_docker') }}"
+  become: true
+  gather_facts: true
+  roles:
+    - role: machines/docker
+      when: "'tag_docker' in group_names"

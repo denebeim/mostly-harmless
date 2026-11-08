@@ -18,6 +18,13 @@
     path: /etc/ipa/default.conf
   register: existing_ipa_client
 
+- name: Require a controller ticket only for new IPA enrollment
+  ansible.builtin.command: klist -s
+  delegate_to: localhost
+  become: false
+  changed_when: false
+  when: not existing_ipa_client.stat.exists
+
 - name: Obtain a host enrollment OTP using the controller Kerberos ticket
   ansible.builtin.command:
     argv:
