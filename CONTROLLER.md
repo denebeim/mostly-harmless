@@ -106,3 +106,20 @@ an end-to-end fresh-enrollment test.
 
 See `CHANGELOG.md` for this checkpoint's validation limits. In particular, a
 successful targeted Hermes reply is not a clean full acceptance-run recap.
+
+## Destructive-operation guard
+
+Both deletion paths call `proxmox/guarded_destroy`. On the Proxmox node it
+atomically acquires a `create` configuration lock against the reviewed digest,
+then keeps that logical lock through graceful shutdown and deletion. Only that
+operation uses root's `--skiplock` to proceed through its own lock; ordinary
+Proxmox configuration writers and competing guard runs remain blocked. The
+helper rechecks the locked digest before removal and uses digest-checked cleanup
+on failure. An unexpected configuration change leaves the lock for manual review.
+Explicit root overrides and out-of-band file edits cannot be prevented by this
+cooperative locking protocol. No force-stop or unreferenced-disk purge is used.
+
+Disk review includes EFI and TPM state volumes. They must be explicitly allowed;
+`destroy_hermes.yaml` additionally checks the expected EFI volume ownership.
+The helper is tested offline with simulated commands; no destructive integration
+test has been run against a live guest for this review update.

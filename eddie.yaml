@@ -235,8 +235,8 @@
       delay: 5
       until: >-
         eddie_local_reply.rc == 0 or
-        'Gateway did not answer' not in eddie_local_reply.stdout or
-        'session.create' not in eddie_local_reply.stdout
+        'Gateway did not answer' not in (eddie_local_reply.stdout ~ eddie_local_reply.stderr) or
+        'session.create' not in (eddie_local_reply.stdout ~ eddie_local_reply.stderr)
       changed_when: false
       failed_when: eddie_local_reply.rc != 0 or 'Eddie is online.' not in eddie_local_reply.stdout
 

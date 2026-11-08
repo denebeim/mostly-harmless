@@ -23,3 +23,14 @@ first Hermes session startup deadline. A targeted retry returned the expected
 reply. Playbook/helper syntax checks pass. A clean full-run recap after the retry
 change, and an end-to-end test of ticket-based fresh-host enrollment, are still
 pending. This milestone does not claim those checks passed.
+
+### PR review follow-up
+
+- Review #1: include EFI and TPM state disks in both destructive allowlist checks.
+- Review #2: replace the separate digest-check/delete sequence with a shared,
+  digest-acquired Proxmox lock held through graceful shutdown and destruction.
+- Review #6: verify the tracked entrypoint/role files in an exported checkout and
+  explicitly allowlist reviewed provisioning dependencies for future changes.
+- Review #9: recognize the cold-session timeout in stdout, stderr, or both.
+- Add eight offline regression tests for disk coverage, locking/cleanup behavior,
+  and retry stream handling. Live destructive testing is intentionally excluded.

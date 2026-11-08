@@ -20,7 +20,7 @@
           - (target_config.stdout | from_json).efidisk0.startswith('heartogold:314/')
           - (target_config.stdout | from_json).ide2.startswith('heartogold:314/')
           - >-
-            (target_config.stdout | from_json).keys() | select('match', '^(scsi|sata|virtio|ide)[0-9]+$') | difference(['scsi0', 'ide2']) | length == 0
+            (target_config.stdout | from_json).keys() | select('match', '^(scsi|sata|virtio|ide|efidisk|tpmstate)[0-9]+$') | difference(['scsi0', 'ide2', 'efidisk0']) | length == 0
           - (target_config.stdout | from_json).hostpci0 == '0000:81:00,pcie=1'
           - >-
             (target_config.stdout | from_json).keys() | select('match', '^(usb|unused)[0-9]+$') | list | length == 0
@@ -42,23 +42,12 @@
       delegate_to: localhost
       no_log: true
 
-    - name: Gracefully shut down Hermes
-      ansible.builtin.command: qm shutdown 314 --timeout 120
-
-    - name: Re-read target before destruction
-      ansible.builtin.command: pvesh get /nodes/heartogold/qemu/314/config --output-format json
-      register: stopped_config
-      changed_when: false
-      no_log: true
-
-    - name: Refuse an intervening configuration change
-      ansible.builtin.assert:
-        that:
-          - (stopped_config.stdout | from_json).digest == (target_config.stdout | from_json).digest
-      no_log: true
-
-    - name: Destroy only the reviewed VM and its allocated disks
-      ansible.builtin.command: qm destroy 314
+    - name: Destroy the reviewed VM under a digest-acquired Proxmox lock
+      ansible.builtin.include_role:
+        name: proxmox/guarded_destroy
+      vars:
+        guarded_destroy_vmid: 314
+        guarded_destroy_config: "{{ target_config.stdout }}"
 
     - name: Verify VM 314 no longer exists
       ansible.builtin.command: pvesh get /cluster/resources --type vm --output-format json

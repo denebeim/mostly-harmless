@@ -333,3 +333,22 @@ session-maintained record, not an autonomous live feed.
 - Owner requested a commit, changelog and PR to main for manual diff review. Added CHANGELOG.md and updated controller instructions with current entrypoints, ticket/SSH bootstrap prerequisites and validation limits.
 - Reviewed pending files for credential material; private inventory, .envrc, Pi-hole TOML, logs, caches, installed dependencies and SSH trust records remain excluded.
 - PR includes prior ai-branch checkpoints plus the integrated Eddie provisioning changes. No infrastructure tasks run during PR preparation.
+
+### 2026-11-07 — Address selected Sourcery review threads
+
+- Owner selected issues 1, 2, 6 and 9 for implementation and requested resolving
+  those conversations and resubmitting PR #1. Other findings remain open.
+- Expanded both destructive disk allowlist checks to EFI/TPM keys. Introduced a
+  shared guarded-destruction role using an atomic qm set --lock create --digest
+  acquisition; normal config writers cannot change the VM between review and
+  deletion. It holds the lock through graceful shutdown, verifies the locked
+  digest and uses normal qm destroy with only its own lock bypassed. Cleanup
+  refuses to clear a changed/uncertain lock. This also protects shutdown once the
+  lock is acquired, but issue 4 was not selected for thread resolution.
+- Read-only installed Proxmox source/help checks confirmed digest comparison and
+  lock setting occur under the config mutex, and shutdown/destroy support root
+  skiplock. No live VM changes or destructive tests were performed.
+- Review #6's entrypoint/create_vm files were already tracked; added explicit
+  allowlist entries for reviewed dependencies and a clean-export syntax check.
+- Timeout retries now inspect combined stdout/stderr. Eight offline regression
+  tests pass, along with integrated and destructive-entrypoint syntax checks.

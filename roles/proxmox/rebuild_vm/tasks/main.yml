@@ -18,42 +18,9 @@
   delegate_to: localhost
   become: false
   no_log: true
-- name: Shut down only the reviewed guest without forced power-off
-  community.general.proxmox_kvm:
-    api_host: '{{ api_host }}'
-    api_user: '{{ api_user }}'
-    api_password: '{{ api_password }}'
-    node: '{{ inventory_hostname }}'
-    vmid: '{{ rebuild_vmid }}'
-    state: stopped
-    force: false
-    timeout: 180
-  no_log: true
-- name: Re-read configuration before deletion to detect concurrent edits
-  ansible.builtin.command:
-    argv:
-    - pvesh
-    - get
-    - /nodes/{{ inventory_hostname }}/qemu/{{ rebuild_vmid }}/config
-    - --output-format
-    - json
-  register: rebuild_config_after_stop
-  changed_when: false
-  no_log: true
-- name: Refuse deletion after any intervening configuration change
-  ansible.builtin.assert:
-    that:
-    - (rebuild_config_after_stop.stdout | from_json).digest == (rebuild_config.stdout | from_json).digest
-    fail_msg: Configuration changed after inspection; review it before deleting.
-  no_log: true
-- name: Remove only the reviewed stopped guest
-  community.general.proxmox_kvm:
-    api_host: '{{ api_host }}'
-    api_user: '{{ api_user }}'
-    api_password: '{{ api_password }}'
-    node: '{{ inventory_hostname }}'
-    vmid: '{{ rebuild_vmid }}'
-    state: absent
-    force: false
-    timeout: 180
-  no_log: true
+- name: Remove the reviewed guest under a digest-acquired Proxmox lock
+  ansible.builtin.include_role:
+    name: proxmox/guarded_destroy
+  vars:
+    guarded_destroy_vmid: "{{ rebuild_vmid }}"
+    guarded_destroy_config: "{{ rebuild_config.stdout }}"

@@ -256,3 +256,17 @@ __marimo__/
 
 # Reviewed project changelog.
 !/CHANGELOG.md
+
+# Complete reviewed Eddie provisioning dependencies and guard regression tests.
+!/eddie.yaml
+!/setup_hermes_vm.yaml
+!/destroy_hermes.yaml
+!/restore_hermes_gpu.yaml
+!/roles/hermes/
+!/roles/proxmox/create_vm/
+!/roles/proxmox/guarded_destroy/
+!/roles/machines/docker/
+!/roles/machines/network/
+!/tests/
+/tests/*
+!/tests/test_review_guards.py

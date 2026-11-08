@@ -1,0 +1,31 @@
+---
+- name: Create a private temporary deletion helper
+  ansible.builtin.tempfile:
+    state: file
+    prefix: ansible-guarded-destroy-
+  register: guarded_destroy_script
+
+- name: Run digest-locked destruction of the reviewed guest
+  block:
+    - name: Install the reviewed helper temporarily
+      ansible.builtin.copy:
+        src: guarded_destroy.py
+        dest: "{{ guarded_destroy_script.path }}"
+        mode: '0700'
+
+    - name: Lock the reviewed configuration, shut down and destroy
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - "{{ guarded_destroy_script.path }}"
+          - --vmid
+          - "{{ guarded_destroy_vmid | string }}"
+          - --node
+          - "{{ inventory_hostname }}"
+        stdin: "{{ guarded_destroy_config }}"
+      no_log: true
+  always:
+    - name: Remove the temporary deletion helper
+      ansible.builtin.file:
+        path: "{{ guarded_destroy_script.path }}"
+        state: absent

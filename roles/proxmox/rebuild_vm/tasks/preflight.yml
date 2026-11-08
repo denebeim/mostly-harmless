@@ -83,7 +83,7 @@
     - (rebuild_config.stdout | from_json).scsi0.startswith(rebuild_storage ~ ':')
     - (rebuild_config.stdout | from_json).keys() | select('match', '^(hostpci|usb|unused)[0-9]+$') | list | length
       == 0
-    - (rebuild_config.stdout | from_json).keys() | select('match', '^(scsi|sata|virtio|ide)[0-9]+$') | difference(rebuild_allowed_disks)
+    - (rebuild_config.stdout | from_json).keys() | select('match', '^(scsi|sata|virtio|ide|efidisk|tpmstate)[0-9]+$') | difference(rebuild_allowed_disks)
       | length == 0
     fail_msg: Target configuration differs from the reviewed disposable guest.
   no_log: true
