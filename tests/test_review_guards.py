@@ -114,17 +114,17 @@ class DeletionGuardTests(unittest.TestCase):
 
 class PlaybookGuardTests(unittest.TestCase):
     def test_both_destructive_entrypoints_check_efi_and_tpm(self):
-        for name in ('roles/proxmox/rebuild_vm/tasks/preflight.yml', 'destroy_hermes.yaml'):
+        for name in ('roles/proxmox/rebuild_vm/tasks/preflight.yml',):
             text = (ROOT / name).read_text()
             patterns = re.findall(r"select\('match', '([^']+)'\)", text)
             disk_pattern = next(p for p in patterns if 'scsi' in p)
             for key in ('scsi0', 'ide2', 'efidisk0', 'tpmstate0'):
                 self.assertRegex(key, disk_pattern)
-        self.assertIn("['scsi0', 'ide2', 'efidisk0']", (ROOT / 'destroy_hermes.yaml').read_text())
+
 
     def test_retry_checks_both_streams_and_stops_on_other_failures(self):
-        plays = yaml.safe_load((ROOT / 'eddie.yaml').read_text())
-        task = next(t for t in plays[-1]['tasks'] if 'until' in t)
+        tasks = yaml.safe_load((ROOT / 'roles/hermes/tasks/verify.yml').read_text())
+        task = next(t for t in tasks if 'until' in t)
         check = Environment().compile_expression(task['until'])
         error = 'Gateway did not answer session.create'
         for stdout, stderr in ((error, ''), ('', error), ('Gateway did not answer', 'session.create')):

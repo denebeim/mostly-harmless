@@ -1,0 +1,20 @@
+---
+- name: Apply gateway changes before its model check
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify local Hermes inference
+  ansible.builtin.command:
+    argv: [timeout, '300', /home/hermes/.local/bin/hermes, chat, -Q, --oneshot, --reasoning, none, --max-turns, '1', -q, 'Reply with exactly: Eddie is online. Do not use tools.']
+  become_user: hermes
+  environment:
+    HOME: /home/hermes
+    PATH: /home/hermes/.local/bin:/usr/local/bin:/usr/bin:/bin
+  register: eddie_local_reply
+  retries: 2
+  delay: 5
+  until: >-
+    eddie_local_reply.rc == 0 or
+    'Gateway did not answer' not in (eddie_local_reply.stdout ~ eddie_local_reply.stderr) or
+    'session.create' not in (eddie_local_reply.stdout ~ eddie_local_reply.stderr)
+  changed_when: false
+  failed_when: eddie_local_reply.rc != 0 or 'Eddie is online.' not in eddie_local_reply.stdout

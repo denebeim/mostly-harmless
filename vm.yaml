@@ -1,0 +1,15 @@
+---
+- ansible.builtin.import_playbook: create_vm.yaml
+- ansible.builtin.import_playbook: join_deepthot.yaml
+- ansible.builtin.import_playbook: install_docker.yaml
+- name: Install applications selected by the VM tags
+  hosts: "{{ vm.name }}"
+  become: true
+  gather_facts: true
+  roles:
+    - role: machines/gpu
+      when: "'tag_gpu' in group_names"
+    - role: machines/ollama
+      when: "'tag_ollama' in group_names"
+    - role: hermes
+      when: "'tag_hermes' in group_names"

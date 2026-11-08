@@ -352,3 +352,22 @@ session-maintained record, not an autonomous live feed.
   allowlist entries for reviewed dependencies and a clean-export syntax check.
 - Timeout retries now inspect combined stdout/stderr. Eight offline regression
   tests pass, along with integrated and destructive-entrypoint syntax checks.
+
+## 2026-11-08 — Operating model reset (supersedes earlier workflow)
+
+- Owner authorizes lifecycle refactoring, a disposable VM test and full ticket/branch/PR completion; then Docker-based Hermes migration on Eddie and current-feature/workload-split investigation. Issues: #3 optimization of deepthot base vm behaviors; #4 Docker Hermes; #5 desktop/server feature investigation.
+- Significant changes belong in this tracked worklog. All command stdout/stderr appends to ignored eddie-session.log through a streaming redactor; never log passwords, tokens or private PEM material. Static IPs are acceptable. The log is not tracked.
+- Per-machine playbooks must declare the machine minimally and converge absent-to-installed via shared roles gated by VM tags. One-off modification/recovery playbooks are not retained as normal entrypoints. VMs may omit IPA, Docker or all application roles.
+- PR #1 was squash-merged into main as 5eb1a4d. Created codex/3-optimize-base-vms from main. Existing LAN-Ollama work in CONTROLLER.md, eddie.yaml and setup_hermes_vm.yaml was privately backed up in .ansible/change-backups/pre-optimization-20261108.patch and preserved while extracting it into shared roles.
+- Eddie preflight: K5200/470.256.02 visible; Ollama 0.40.15 reports qwen3.5:4b at 100% GPU with context 65536; host Hermes and Ollama services active. Docker and Hermes privileged inspection will use sudo; initial unprivileged checks lacked permission. No migration yet.
+- Added shared create_vm/join_deepthot/install_docker/vm entrypoints and base/GPU/Ollama roles. Proxmox helper compares live settings, preserves NIC MAC, resizes upward only and reports actual tags. Base bootstrap uses private per-MAC first-use SSH pinning, installs guest agent, then verifies trust through the hypervisor into the same file. Cloud-init upgrades disabled; declared guest upgrades are an explicit base-role option.
+- Test target: deepthot-base-test, VM 8314, 192.168.42.250/24, 2 cores, 2 GiB, 12G, no tags; ID/name absent and IP had no ping/neighbor response. Storage heartogold has capacity; other storage/services were only observed and not modified. Tests must never use Eddie's ID or GPU.
+- A file-generation command initially used system Python without PyYAML; it was rerun successfully with the project virtualenv. No managed host was affected.
+
+- Owner steering: preserve the pending LAN Ollama listener changes. Test VMs must not run package upgrades. Eddie declares local user/group hermes and exact Docker membership [hermes]; that service account is not enrolled in Kerberos. Optional local-user and exact Docker-membership declarations now live in the shared roles.
+
+- Disposable VM 8314 absent-to-running test passed with no optional tags. After replacing timestamp-only SSH backups with VM/keyset-keyed backups, the settled repeat run reported changed=0 for both deepthot-base-test and heartogold; IPA/Docker/app roles skipped and package-upgrade tasks skipped. Starting a Docker-only tag test on the same disposable guest, without IPA or upgrades. Docker role now delegates package installation to Galaxy and enforces membership only when explicitly declared; removed unrelated Kubernetes swap/kernel policy.
+
+- Removed permanent one-off create-Eddie, restore-GPU, destroy-Hermes and setup-Hermes playbooks plus historical patch files from current entrypoints; their history remains in Git. Shared roles own behavior. Replaced controller documentation with the operating contract, generic entrypoints, tag gates, local-account policy and preserved LAN Ollama usage.
+
+- Docker-only disposable deployment passed, and its settled repeat reported changed=0 on guest and hypervisor. IPA and package upgrades remained disabled. Guarded teardown of VM 8314 passed; cluster inventory and storage list confirm no VM or owned volumes remain. IPA confirms no test host entry existed. No controller/hypervisor global SSH entries matched the temporary name/FQDN/IP; its private per-MAC trust and backup files were removed. Unrelated Kerberos tickets and caches were retained.

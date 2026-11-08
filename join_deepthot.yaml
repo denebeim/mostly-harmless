@@ -1,0 +1,8 @@
+---
+- name: Join declared IPA clients to Deepthot
+  hosts: "{{ vm.name | default('tag_ipa') }}"
+  become: true
+  gather_facts: true
+  roles:
+    - role: machines/ipa
+      when: "'tag_ipa' in group_names"

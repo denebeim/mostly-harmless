@@ -1,0 +1,26 @@
+---
+- name: Create or converge a declared VM
+  hosts: "{{ vm.node | default('heartogold') }}"
+  remote_user: root
+  gather_facts: false
+  roles:
+    - proxmox/create_vm
+
+- name: Bootstrap the base guest
+  hosts: "{{ vm.name }}"
+  become: true
+  gather_facts: false
+  roles:
+    - machines/base
+
+- name: Verify and pin guest identity through the hypervisor
+  hosts: "{{ vm.node | default('heartogold') }}"
+  remote_user: root
+  gather_facts: false
+  vars:
+    newid: "{{ vm.id }}"
+    vmname: "{{ vm.name }}"
+    controller_known_hosts_file: "{{ hostvars[vm.name].vm_known_hosts_file }}"
+    ssh_host_key_names: ["{{ vm.name }}", "{{ vm.name }}.{{ vm.domain | default('local.deepthot.org') }}"]
+  roles:
+    - proxmox/ssh_host_key

@@ -1,0 +1,64 @@
+---
+- name: Wait for guest SSH
+  ansible.builtin.wait_for_connection:
+    timeout: 180
+
+- name: Wait for cloud-init
+  ansible.builtin.command: cloud-init status --wait --long
+  register: cloud_init
+  changed_when: false
+  failed_when: >-
+    cloud_init.rc != 0 and not (cloud_init.rc == 2 and
+    'status: done' in cloud_init.stdout and 'errors: []' in cloud_init.stdout)
+
+- name: Install the guest agent
+  ansible.builtin.apt:
+    name: qemu-guest-agent
+    state: present
+    update_cache: true
+    cache_valid_time: 86400
+    lock_timeout: 600
+
+- name: Enable the guest agent
+  ansible.builtin.systemd_service:
+    name: qemu-guest-agent
+    state: started
+    enabled: true
+
+- name: Set the site timezone
+  community.general.timezone:
+    name: "{{ vm.timezone | default('America/Phoenix') }}"
+
+- name: Update packages only when declared
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: safe
+    force_apt_get: true
+    lock_timeout: 600
+  when: vm.update_packages | default(false) | bool
+
+- name: Check whether a reboot is needed
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: vm_reboot
+
+- name: Reboot after declared package upgrades
+  ansible.builtin.reboot:
+    reboot_timeout: 600
+  when: vm.update_packages | default(false) | bool and vm_reboot.stat.exists
+
+- name: Create declared local service groups
+  ansible.builtin.group:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ vm.local_users | default([]) }}"
+
+- name: Create declared local service accounts
+  ansible.builtin.user:
+    name: "{{ item }}"
+    group: "{{ item }}"
+    home: "/home/{{ item }}"
+    shell: /bin/bash
+    create_home: true
+    state: present
+  loop: "{{ vm.local_users | default([]) }}"
