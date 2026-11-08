@@ -278,3 +278,58 @@ session-maintained record, not an autonomous live feed.
 - Added separate destroy_hermes.yaml with exact VM identity/disk checks, private configuration record, graceful shutdown, configuration digest guard, and post-removal verification. Physical passthrough hardware and unrelated VMs/storage are not deletion targets.
 - Pi-hole web endpoint http://services/admin/ redirects to its login page; web authentication requires an existing usable password, not available in this session. No Pi-hole settings changed.
 - Checkpoint captures current working installation automation, not proof of a clean rebuild. IPA wrapper restoration and full end-to-end eddie.yaml execution remain outstanding.
+
+### 2026-11-07 — Base Eddie rebuild smoke test
+
+- Owner explicitly requested destroying Hermes, releasing resources, recreating VM 314 as Eddie without upgrades, then creating Pi-hole records through the visible browser.
+- Ran destroy_hermes.yaml successfully (failed=0); verified no VM 314 remained and pvesm list heartogold --vmid 314 returned no allocated volumes. Preserved the old configuration privately under .ansible/rebuild-records.
+- Added create_eddie.yaml, a base-VM-only playbook using the existing template/create_vm role. Explicit ciupgrade false is applied before first boot through a new optional create_vm task. No guest application roles or package upgrades ran. Static IP remains the authorized interim design.
+- VM 314 named eddie is running, 8 cores/16 GiB/40G, serial console and K5200 passthrough configured. Guest SSH confirms eth0 MAC BC:24:11:47:69:B9 and IP 192.168.42.132/24. Cloud-init completed, errors empty; only deprecated user-field warnings.
+- Source template lacks qemu-guest-agent. Interrupted the optional agent-only retry loop (controller exit 99) after successful creation, serial login prompt and SSH verification. Updated base playbook to wait for SSH without requiring agent installation. Verified SSH through an isolated first-use known-hosts file under .ansible; existing workstation entries were not changed.
+- Authenticated Pi-hole session was available in visible browser; created local A records eddie and eddie.local.deepthot.org -> 192.168.42.132. UI confirmed both entries; direct DNS queries to 192.168.42.2 returned that address for each. Screenshot saved /tmp/eddie-dns-records.png. Existing Hermes DNS record retained; no DHCP reservation created in this static-network smoke test.
+- Pi-hole record changes are recorded here; deployment templating/secret separation remains future work. Private Pi-hole TOML not copied or committed.
+- Stopped at base VM + DNS milestone; IPA enrollment, user NFS-home login, Docker, Hermes and Ollama are deliberately not provisioned on fresh Eddie yet.
+
+### TODO — LAN DNS/DHCP architecture (owner preference, 2026-11-07)
+
+- [ ] Discuss Pi-hole versus IPA DNS versus traditional BIND9 and separate DHCP services on `services`. Owner prefers familiar, explicit zone/service configuration and is considering returning to BIND9 plus isc-dhcpd; evaluate the DHCP implementation when planning migration. This is a discussion item, not authorization to migrate now.
+- Current decision: Pi-hole owns LAN DNS; do not use IPA as the LAN DNS authority. IPA remains intended for identity and automount. Actual IPA DNS/forwarding configuration has not been audited.
+- Desired DNS model: zone local.deepthot.org with an SOA and one relative host A record per machine (e.g. eddie A 192.168.42.132). Verify Pi-hole SOA/domain behavior; do not equate its local host list with a BIND authoritative zone.
+- [ ] Consolidate Eddie's duplicate short-name/FQDN Pi-hole entries after verifying local-domain expansion. Both entries currently remain; no DNS changes made for this documentation update.
+- Long-term network source of truth: DHCP reservations map VM MACs to stable IPs and supply DNS/domain settings; creation automation updates the reservation MAC. Static guest settings are an interim decision. Future configuration uses templates with separately protected secrets; never commit the private Pi-hole TOML.
+
+### 2026-11-07 — Prepare owner-run full Eddie provisioning
+
+- Owner wants to execute Ansible from the VSCodium terminal. No infrastructure provisioning was executed during preparation.
+- Updated eddie.yaml to target Eddie/VM 314, preserve ciupgrade false, bootstrap qemu-guest-agent over the smoke-tested isolated SSH trust file, then refresh normal controller trust through the existing verified guest-agent role. The terminal command supplies -F /dev/null for the known controller SSH-config issue. Bootstrap does not disable host-key verification.
+- Restored machines/ipa using the existing Galaxy client role: explicit domain/realm/server, default automount location, NFS/SSSD prerequisites, hostname and autofs configuration. Omitted IPA DNS registration/resolver takeover, the generic package-upgrade wrapper, and unconditional automount uninstall. IPA enrollment password is a private runtime vars_prompt, skipped when already supplied as a variable; no password stored in playbooks.
+- Added explicit Hermes service-account/group/home creation for a fresh guest. Corrected Docker swap fact reference to ansible_facts.swaptotal_mb.
+- Imported existing GPU/Ollama/model playbook at the end, with configurable ai_target selecting Eddie. Syntax validation passes with a local test inventory. Actual enrollment, installation and final inference must be verified by the owner-run playbook; not claimed complete.
+- New base entrypoint and IPA wrapper are allowlisted so they appear for review in Git. Existing uncommitted work preserved; no new commit or push.
+- Run from project root after loading .envrc and .venv: PYTHONUNBUFFERED=1 ansible-playbook eddie.yaml --ssh-common-args='-F /dev/null' 2>&1 | tee -a eddie-session.log (enable shell pipefail). Output remains in the same append-only session log.
+
+### 2026-11-07 — Full-run acceptance target includes package updates
+
+- Owner clarified that the upcoming full run should deliver updated packages, IPA, Docker, and Hermes using Ollama. This supersedes the no-upgrade restriction for the earlier base-VM smoke test.
+- Added explicit apt safe upgrade with refreshed indexes, a conditional reboot and fact refresh before application roles. Kept cloud-init automatic upgrades disabled so Ansible controls the upgrade stage.
+- Added final checks for IPA account/home, autofs access, Docker daemon, required services and an actual Hermes response via the configured local Ollama model. Full provisioning remains owner-run and has not been executed by the agent.
+
+### 2026-11-07 — Enrollment uses controller kinit admin ticket
+
+- Owner clarified expected workflow: kinit admin, then run Ansible without password prompts. Removed the IPA vars_prompt. Added a local klist -s preflight before provisioning; missing/expired tickets stop with a kinit admin instruction.
+- Galaxy ipaclient join requires a password/keytab rather than directly consuming the controller cache. The restored wrapper now runs a system-Python IPA helper locally, authenticating through the existing ticket to create/reset only the target host enrollment OTP. A stale host key is disabled only when the fresh guest has no IPA configuration; the existing host object is preserved.
+- OTP handling uses no_log and noncached in-memory facts; only the one-time host credential goes to the guest. No admin password, keytab or ticket is copied. Existing configured clients skip OTP generation.
+- Controller needs the system FreeIPA Python libraries and existing IPA configuration. Those libraries are installed here; actual ticket/RPC enrollment awaits the owner-run playbook. No infrastructure changes made during this edit.
+
+### 2026-11-07 — Acceptance failure: cold Hermes session startup
+
+- Owner-run acceptance reached the final prompt with IPA identity/home, Docker, driver, Ollama/model and all service checks passing. Final prompt failed: gateway did not answer session.create, rc 1; full-run recap Eddie ok=104, changed=51, failed=1.
+- Current gateway remained active without crashes/restarts. Logs showed cold plugin/tool/model-metadata initialization completed about 12 seconds after the CLI disconnected. Installed source uses DEFAULT_RPC_TIMEOUT=30 with no configuration hook found. This identifies a cold-session startup deadline issue; no evidence of model inference failure in that attempt.
+- Retested only the same Hermes prompt after initialization: 'Eddie is online.', exit 0.
+- Added at most two retries with 5-second delay only for the exact gateway session.create timeout; other errors and incorrect/missing responses still fail. Syntax validated. A new full successful playbook recap is still required to claim a clean end-to-end acceptance run.
+
+### 2026-11-07 — Prepare Eddie brought-to-life pull request
+
+- Owner requested a commit, changelog and PR to main for manual diff review. Added CHANGELOG.md and updated controller instructions with current entrypoints, ticket/SSH bootstrap prerequisites and validation limits.
+- Reviewed pending files for credential material; private inventory, .envrc, Pi-hole TOML, logs, caches, installed dependencies and SSH trust records remain excluded.
+- PR includes prior ai-branch checkpoints plus the integrated Eddie provisioning changes. No infrastructure tasks run during PR preparation.

@@ -27,6 +27,20 @@
     update_cache: true
     cache_valid_time: 3600
 
+- name: Ensure Hermes service group exists
+  ansible.builtin.group:
+    name: "{{ hermes_group }}"
+    state: present
+
+- name: Ensure Hermes service account and home exist
+  ansible.builtin.user:
+    name: "{{ hermes_user }}"
+    group: "{{ hermes_group }}"
+    home: "/home/{{ hermes_user }}"
+    shell: /bin/bash
+    create_home: true
+    state: present
+
 - name: Check if docker group exists
   ansible.builtin.getent:
     database: group

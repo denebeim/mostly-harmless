@@ -247,3 +247,12 @@ __marimo__/
 /modules/*
 !/modules/requirements.txt
 !/modules/requirements.yml
+
+# Reviewed Eddie base entrypoint and IPA client wrapper.
+!/create_eddie.yaml
+!/roles/machines/
+/roles/machines/*
+!/roles/machines/ipa/
+
+# Reviewed project changelog.
+!/CHANGELOG.md

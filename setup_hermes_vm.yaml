@@ -1,7 +1,7 @@
 ---
 # Restored from the reference setup_hermes_vm.yaml; no container runtime changes.
 - name: Configure Hermes NVIDIA driver and Ollama
-  hosts: hermes
+  hosts: "{{ ai_target | default('hermes') }}"
   remote_user: ansible
   become: true
   gather_facts: true

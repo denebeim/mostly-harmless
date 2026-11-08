@@ -1,0 +1,72 @@
+---
+# Restored from deepthot-configuration; install only required client packages.
+# Pi-hole owns DNS: do not register host records or change resolver ownership.
+- name: Install IPA and NFS home client prerequisites
+  ansible.builtin.apt:
+    name: [freeipa-client, autofs, nfs-common, sssd-tools]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Set the IPA client fully qualified hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}.local.deepthot.org"
+    use: systemd
+
+- name: Check whether this guest already has IPA configuration
+  ansible.builtin.stat:
+    path: /etc/ipa/default.conf
+  register: existing_ipa_client
+
+- name: Obtain a host enrollment OTP using the controller Kerberos ticket
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - "{{ role_path }}/files/enrollment_otp.py"
+      - "{{ inventory_hostname }}.local.deepthot.org"
+  delegate_to: localhost
+  become: false
+  when: not existing_ipa_client.stat.exists
+  register: ipa_enrollment_otp
+  no_log: true
+
+- name: Keep the enrollment OTP only in memory for the Galaxy role
+  ansible.builtin.set_fact:
+    ipaclient_otp: "{{ ipa_enrollment_otp.stdout | trim }}"
+    cacheable: false
+  when: not existing_ipa_client.stat.exists
+  no_log: true
+
+- name: Enroll identity and automount through the Galaxy IPA role
+  ansible.builtin.include_role:
+    name: freeipa.ansible_freeipa.ipaclient
+  vars:
+    ipaclient_domain: local.deepthot.org
+    ipaclient_realm: LOCAL.DEEPTHOT.ORG
+    ipaclient_servers: [ipa.local.deepthot.org]
+    ipaclient_hostname: "{{ inventory_hostname }}.local.deepthot.org"
+    ipaclient_automount_location: default
+    ipaclient_use_otp: "{{ ipaclient_otp is defined }}"
+    ipaclient_force_join: "{{ not existing_ipa_client.stat.exists }}"
+    ipaclient_allow_repair: true
+    ipaclient_configure_dns_resolver: false
+    ipasssd_enable_dns_updates: false
+    ipaclient_no_dns_sshfp: true
+    ipaclient_mkhomedir: false
+
+- name: Use SSSD for IPA automount maps
+  ansible.builtin.lineinfile:
+    path: /etc/nsswitch.conf
+    regexp: '^automount:'
+    line: 'automount: files sss'
+  notify: Restart IPA automount
+
+- name: Enable SSSD and autofs
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop: [sssd, autofs]
+
+- name: Apply automount map changes before continuing
+  ansible.builtin.meta: flush_handlers

@@ -1,0 +1,37 @@
+---
+# Base-VM smoke test only; no guest roles or package upgrades.
+- name: Create and boot Eddie base VM
+  hosts: heartogold
+  remote_user: root
+  gather_facts: false
+  vars:
+    clone: deepthot-24-04
+    api_host: heartogold
+    vmname: eddie
+    newid: 314
+    memory: 16384
+    cores: 8
+    bios: ovmf
+    machine: q35
+    vga: serial0
+    vm_serial:
+      serial0: socket
+    hostpci:
+      hostpci0: "0000:81:00,pcie=1"
+    size: 40G
+    storage: heartogold
+    IP: 192.168.42.132
+    gateway: 192.168.42.1
+    nameserver: 192.168.42.2
+    searchdomain: local.deepthot.org
+    ciupgrade: false
+    mytags: [ipa, hermes, docker]
+  roles:
+    - proxmox/create_vm
+  post_tasks:
+    - name: Wait for base guest SSH without requiring guest-agent packages
+      ansible.builtin.wait_for:
+        host: "{{ IP }}"
+        port: 22
+        timeout: 180
+      delegate_to: localhost

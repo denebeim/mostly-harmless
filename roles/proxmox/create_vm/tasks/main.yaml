@@ -74,6 +74,11 @@
         name: proxmox/firmware
       when: bios is defined
 
+    - name: Set explicitly requested cloud-init package upgrade policy before boot
+      ansible.builtin.command:
+        argv: [qm, set, "{{ newid | string }}", --ciupgrade, "{{ '1' if ciupgrade | bool else '0' }}"]
+      when: ciupgrade is defined
+
     - name: Spin up VM
       community.general.proxmox_kvm:
         api_host: "{{api_host}}"

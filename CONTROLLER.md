@@ -66,3 +66,43 @@ Before running `eddie.yaml`, review its provisioning and guest-configuration
 effects with the owner. It can resize disks, reconfigure a VM, upgrade guest
 packages, enroll identity, and change Docker and agent services. A successful
 inventory or syntax check does not authorize those changes.
+
+## Eddie provisioning checkpoint (2026-11-07)
+
+The reviewed Eddie entrypoints and their supporting local roles are now tracked;
+other imported operational configuration remains ignored. The historical patches
+above describe earlier imports, not the latest tracked entrypoints.
+
+- `create_eddie.yaml`: create/boot the base VM without guest roles or cloud-init
+  package upgrades. It does not destroy an existing VM.
+- `eddie.yaml`: provision Eddie, update Ubuntu packages, reboot when required,
+  configure IPA/NFS homes and Docker, then install Hermes, the K5200 driver,
+  Ollama and Qwen, followed by functional acceptance checks.
+- `destroy_hermes.yaml`: separate destructive operation guarded for the old
+  Hermes identity; it deliberately refuses the renamed Eddie guest.
+
+The fresh-guest bootstrap currently requires the host key established during the
+base smoke test in `.ansible/eddie-smoke-known-hosts`. That local trust file is not
+committed. Bootstrap installs the guest agent, then refreshes normal SSH trust
+through the hypervisor. This is a current prerequisite, not a completed general
+solution for arbitrary new controllers or replacement guests.
+
+From the project root, load the private `.envrc` and activate `.venv`. Obtain an
+IPA-authorized Kerberos ticket (`kinit admin` when needed), then run:
+
+```bash
+set -o pipefail
+PYTHONUNBUFFERED=1 ansible-playbook eddie.yaml \
+  --ssh-common-args='-F /dev/null' 2>&1 | tee -a eddie-session.log
+```
+
+The `-F /dev/null` option works around the known controller SSH-config issue.
+The ticket check tests validity; it does not prove the principal has enrollment
+rights. The local enrollment helper needs system Python's FreeIPA libraries and
+controller IPA configuration. It uses the ticket for a one-time host enrollment
+credential, handles that credential with `no_log`, and does not copy administrator
+passwords, keytabs or tickets onto the guest. This new ticket path still requires
+an end-to-end fresh-enrollment test.
+
+See `CHANGELOG.md` for this checkpoint's validation limits. In particular, a
+successful targeted Hermes reply is not a clean full acceptance-run recap.
