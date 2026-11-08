@@ -1,0 +1,89 @@
+---
+    - name: Clone template
+      community.general.proxmox_kvm:
+        api_host: "{{api_host}}"
+        api_user: "{{api_user}}"
+        api_password: "{{api_password}}"
+        name: "{{vmname}}"
+        newid: "{{ omit if newid is not defined else newid }}"
+        format: "qcow2"
+        node: "{{ api_host }}"
+        clone: "{{clone}}"
+        full: true
+        storage: "{{storage}}"
+        timeout: 600
+        state: present
+
+    - name: "Reconfigure {{vmname}}"
+      community.general.proxmox_kvm:
+        update: true
+        # update_unsafe: true
+        api_host: "{{api_host}}"
+        api_user: "{{api_user}}"
+        api_password: "{{api_password}}"
+        name: "{{vmname}}"
+        vmid: "{{omit if newid is not defined else newid}}"
+        node: "{{api_host}}"
+        net:
+          net0: "bridge=vmbr0"
+          # ipconfig0: "{{'gw=192.168.42.1,ip={{IP}}/24' if IP is defined else omit}}"
+        agent: "enabled=1,fstrim_cloned_disks=1"
+        kvm: true
+        cpu: "host"
+        memory: "{{ omit if memory is not defined else memory }}"
+        cores: "{{ omit if cores is not defined else cores }}"
+        tags: "{{ omit if mytags is not defined else mytags }}"
+
+        #boot: "order=scsi0"
+        hostpci: "{{omit if hostpci is not defined else hostpci}}"
+        machine: "{{omit if machine is not defined else machine}}"
+        vga: "{{ vga | default('std') }}"
+        serial: "{{ vm_serial | default(omit) }}"
+        ostype: "l26"
+        autostart: "{{autostart}}"
+      changed_when: false
+
+    - name: configureIP
+      community.general.proxmox_kvm:
+        api_host: "{{api_host}}"
+        api_user: "{{api_user}}"
+        api_password: "{{api_password}}"
+        node: "{{api_host}}"
+        name: "{{vmname}}"
+        vmid: "{{ omit if newid is not defined else newid }}"
+        ipconfig:
+          ipconfig0: "gw={{ gateway | default('192.168.42.1') }},ip={{IP}}/24"
+        nameservers: "{{ nameserver | default(omit) }}"
+        searchdomains: "{{ searchdomain | default(omit) }}"
+        update_unsafe: true
+        update: true
+      when: IP is defined
+
+    - name: Resize Disk
+      community.general.proxmox_disk:
+        api_host: "{{api_host}}"
+        api_user: "{{api_user}}"
+        api_password: "{{api_password}}"
+        name: "{{vmname}}"
+        state: resized
+        disk: scsi0
+        size: "{{size}}"
+
+    - name: Configure explicitly requested UEFI firmware
+      ansible.builtin.include_role:
+        name: proxmox/firmware
+      when: bios is defined
+
+    - name: Set explicitly requested cloud-init package upgrade policy before boot
+      ansible.builtin.command:
+        argv: [qm, set, "{{ newid | string }}", --ciupgrade, "{{ '1' if ciupgrade | bool else '0' }}"]
+      when: ciupgrade is defined
+
+    - name: Spin up VM
+      community.general.proxmox_kvm:
+        api_host: "{{api_host}}"
+        api_user: "{{api_user}}"
+        api_password: "{{api_password}}"
+        name: "{{vmname}}"
+        state: started
+      register: result

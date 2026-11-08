@@ -1,0 +1,47 @@
+---
+# Default variables for role: hermes
+# Nous Research Hermes Agent (hermes-agent)
+
+hermes_user: hermes
+hermes_group: hermes
+hermes_home: "/home/{{ hermes_user }}/.hermes"
+# Real checkout location: the installer places the git source under
+# $HERMES_HOME/hermes-agent (~/.hermes/hermes-agent), NOT ~/.local/share.
+hermes_install_dir: "{{ hermes_home }}/hermes-agent"
+hermes_bin: "/home/{{ hermes_user }}/.local/bin/hermes"
+
+# Force reinstall even if hermes binary exists
+hermes_force_install: false
+hermes_extra_install_args: ""
+
+# Model & Provider Configuration
+# Providers: auto, openrouter, nous, nous-api, anthropic, openai-codex, gemini, etc.
+hermes_default_model: "anthropic/claude-opus-4.6"
+hermes_provider: "auto"
+hermes_base_url: ""
+
+# API Keys (set here or in inventory / vault / host_vars)
+hermes_openrouter_api_key: ""
+hermes_anthropic_api_key: ""
+hermes_openai_api_key: ""
+hermes_nous_api_key: ""
+hermes_gemini_api_key: ""
+hermes_extra_env: {}
+
+# Runtime & DB Configuration
+hermes_db_journal_mode: "wal"
+hermes_runtime_nofile: 4096
+hermes_terminal_backend: "local"
+hermes_max_iterations: 50
+
+# Gateway Systemd Service
+# Start the persistent Hermes messaging gateway on boot
+hermes_gateway_enabled: false
+hermes_gateway_manage_service: true
+hermes_gateway_host: "0.0.0.0"
+hermes_gateway_port: 8080
+
+# Cron scheduler — serves scheduled `hermes cron` jobs via a systemd timer
+# (hermes cron tick = "run due jobs once and exit"; the timer re-fires it).
+hermes_cron_enabled: true
+hermes_cron_tick_interval: "1min"

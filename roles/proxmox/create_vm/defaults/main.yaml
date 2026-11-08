@@ -1,0 +1,8 @@
+    api_user: "{{ lookup('ansible.builtin.env','PROXMOX_USER')}}"
+    api_password: "{{ lookup('ansible.builtin.env','PROXMOX_PASSWORD') }}"
+    api_host: heartogold
+    storage: heartogold
+    clone: ubuntu-cloud
+    size: 8G
+    autostart: false
+    domain: "local.deepthot.org"

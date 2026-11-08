@@ -1,0 +1,6 @@
+---
+- name: Apply Hermes Netplan
+  ansible.builtin.command: netplan apply
+
+- name: Clear automount resolver cache after DNS changes
+  ansible.builtin.command: systemctl try-restart autofs.service

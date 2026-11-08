@@ -1,0 +1,13 @@
+[Unit]
+Description=Run the Hermes Agent cron scheduler on a schedule
+Documentation=https://hermes-agent.nousresearch.com/docs/reference/cli-commands
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec={{ hermes_cron_tick_interval }}
+AccuracySec=1s
+Persistent=true
+Unit=hermes-cron.service
+
+[Install]
+WantedBy=timers.target

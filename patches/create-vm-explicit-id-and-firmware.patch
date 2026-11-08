@@ -1,0 +1,10 @@
+--- a/roles/proxmox/create_vm/tasks/main.yaml
++++ b/roles/proxmox/create_vm/tasks/main.yaml
+@@ -51,0 +52 @@
++        vmid: "{{ omit if newid is not defined else newid }}"
+@@ -66,0 +68,5 @@
++
++    - name: Configure explicitly requested UEFI firmware
++      ansible.builtin.include_role:
++        name: proxmox/firmware
++      when: bios is defined

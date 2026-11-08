@@ -1,0 +1,103 @@
+---
+- name: Read the VM identity through the trusted hypervisor connection
+  ansible.builtin.command:
+    argv: [pvesh, get, "/nodes/{{ inventory_hostname }}/qemu/{{ newid }}/config", --output-format, json]
+  register: ssh_vm_config
+  changed_when: false
+  no_log: true
+
+- name: Confirm the expected VM name and a fixed IPv4 address
+  ansible.builtin.assert:
+    that:
+      - (ssh_vm_config.stdout | from_json).name == vmname
+      - (ssh_vm_config.stdout | from_json).ipconfig0 is search('(^|,)ip=[0-9]+[.][0-9]+[.][0-9]+[.][0-9]+/')
+    fail_msg: Refusing to refresh SSH trust for an unexpected guest or address.
+  no_log: true
+
+- name: Verify the running guest hostname through its agent
+  ansible.builtin.command:
+    argv: [qm, guest, exec, "{{ newid }}", --, /usr/bin/hostname, --short]
+  register: ssh_guest_hostname
+  changed_when: false
+  until: ssh_guest_hostname.rc == 0
+  retries: 24
+  delay: 5
+  no_log: true
+
+- name: Require the guest agent to confirm the expected identity
+  ansible.builtin.assert:
+    that:
+      - (ssh_guest_hostname.stdout | from_json).exitcode == 0
+      - (ssh_guest_hostname.stdout | from_json)['out-data'] | trim == vmname
+    fail_msg: The guest hostname does not match the expected VM identity.
+  no_log: true
+
+- name: Read public SSH host keys without trusting the guest SSH endpoint
+  ansible.builtin.command:
+    argv:
+      - qm
+      - guest
+      - exec
+      - "{{ newid }}"
+      - --
+      - /bin/sh
+      - -c
+      - cat /etc/ssh/ssh_host_*_key.pub
+  register: ssh_guest_keys
+  changed_when: false
+  no_log: true
+
+- name: Collect the verified address and supported public keys
+  ansible.builtin.set_fact:
+    ssh_verified_address: "{{ (ssh_vm_config.stdout | from_json).ipconfig0.split('ip=')[1].split('/')[0] }}"
+    ssh_verified_keys: >-
+      {{ (ssh_guest_keys.stdout | from_json)['out-data'].splitlines()
+         | select('match', '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp[0-9]+) [A-Za-z0-9+/=]+( |$)') | list }}
+    ssh_controller_file: "{{ controller_known_hosts_file | default(lookup('ansible.builtin.env', 'HOME') ~ '/.ssh/known_hosts') }}"
+  no_log: true
+
+- name: Refuse an empty or unsuccessful public-key result
+  ansible.builtin.assert:
+    that:
+      - (ssh_guest_keys.stdout | from_json).exitcode == 0
+      - ssh_verified_keys | length > 0
+    fail_msg: No supported public host keys were returned by the trusted guest-agent path.
+  no_log: true
+
+- name: Create the private local SSH-trust backup directory
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/.ansible/known-hosts-backups"
+    state: directory
+    mode: '0700'
+  delegate_to: localhost
+  become: false
+
+- name: Check for an existing controller trust file
+  ansible.builtin.stat:
+    path: "{{ ssh_controller_file }}"
+  register: ssh_controller_file_stat
+  delegate_to: localhost
+  become: false
+  no_log: true
+
+- name: Preserve the controller trust file privately
+  ansible.builtin.copy:
+    src: "{{ ssh_controller_file }}"
+    dest: "{{ playbook_dir }}/.ansible/known-hosts-backups/{{ now(utc=true, fmt='%Y%m%dT%H%M%S%f') }}"
+    mode: '0600'
+  when: ssh_controller_file_stat.stat.exists
+  delegate_to: localhost
+  become: false
+  no_log: true
+
+- name: Refresh only the verified guest address and requested hostnames
+  ansible.builtin.known_hosts:
+    path: "{{ ssh_controller_file }}"
+    name: "{{ item.0 }}"
+    key: "{{ item.0 }} {{ item.1 }}"
+    hash_host: true
+    state: present
+  loop: "{{ ([ssh_verified_address] + (ssh_host_key_names | default([]))) | unique | product(ssh_verified_keys) | list }}"
+  delegate_to: localhost
+  become: false
+  no_log: true

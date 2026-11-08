@@ -1,0 +1,96 @@
+---
+# Restored from the reference setup_hermes_vm.yaml; no container runtime changes.
+- name: Configure Hermes NVIDIA driver and Ollama
+  hosts: "{{ ai_target | default('hermes') }}"
+  remote_user: ansible
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Install legacy K5200 driver and matching kernel headers
+      ansible.builtin.apt:
+        name:
+          - "linux-headers-{{ ansible_facts.kernel }}"
+          - nvidia-driver-470
+          - nvidia-utils-470
+          - curl
+          - zstd
+        state: present
+        install_recommends: false
+        update_cache: true
+        cache_valid_time: 3600
+      tags: driver
+
+    - name: Load NVIDIA driver
+      community.general.modprobe:
+        name: nvidia
+        state: present
+      tags: driver
+
+    - name: Verify K5200 driver
+      ansible.builtin.command: nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
+      register: gpu_info
+      changed_when: false
+      tags: driver
+
+    - name: Show GPU driver result
+      ansible.builtin.debug:
+        var: gpu_info.stdout
+      tags: driver
+
+    - name: Download official Ollama installer
+      ansible.builtin.get_url:
+        url: https://ollama.com/install.sh
+        dest: /var/tmp/ollama-install.sh
+        mode: '0700'
+      tags: ollama
+
+    - name: Install Ollama
+      environment:
+        OLLAMA_VERSION: "0.40.15"
+      ansible.builtin.command: /bin/sh /var/tmp/ollama-install.sh
+      args:
+        creates: /usr/local/bin/ollama
+      tags: ollama
+
+    - name: Enable Ollama service
+      ansible.builtin.systemd_service:
+        name: ollama
+        state: started
+        enabled: true
+        daemon_reload: true
+      tags: ollama
+
+    - name: Wait for Ollama API
+      ansible.builtin.uri:
+        url: http://127.0.0.1:11434/api/version
+      register: ollama_api
+      retries: 12
+      delay: 5
+      until: ollama_api.status == 200
+      tags: ollama
+
+    - name: List installed Ollama models
+      ansible.builtin.command: ollama list
+      register: installed_models
+      changed_when: false
+      tags: model
+
+    - name: Pull the reference Qwen model
+      ansible.builtin.command: ollama pull qwen3.5:4b
+      when: "'qwen3.5:4b' not in installed_models.stdout"
+      async: 1800
+      poll: 10
+      tags: model
+
+    - name: Configure Hermes for local Ollama inference
+      ansible.builtin.include_role:
+        name: hermes
+        tasks_from: local_model
+        apply:
+          tags: model
+      vars:
+        hermes_gateway_enabled: true
+        hermes_default_model: qwen3.5:4b
+        hermes_provider: custom
+        hermes_base_url: http://127.0.0.1:11434/v1
+      tags: model

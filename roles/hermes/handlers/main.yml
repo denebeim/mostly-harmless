@@ -1,0 +1,18 @@
+---
+# Handlers for role: hermes
+
+- name: reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: restart hermes-gateway
+  ansible.builtin.systemd:
+    name: hermes-gateway
+    state: restarted
+  when: hermes_gateway_enabled | bool
+
+- name: restart hermes-cron
+  ansible.builtin.systemd:
+    name: hermes-cron.service
+    state: restarted
+  when: hermes_cron_enabled | bool

@@ -228,12 +228,18 @@ __marimo__/
 !/requirements.txt
 !/requirements-controller.lock.txt
 !/CONTROLLER.md
+!/patches/
 !/inventory/
 /inventory/*
 !/inventory/proxmox.py
 !/roles/
 /roles/*
 !/roles/requirements.yml
+!/roles/proxmox/
+/roles/proxmox/*
+!/roles/proxmox/rebuild_vm/
+!/roles/proxmox/firmware/
+!/roles/proxmox/ssh_host_key/
 !/collections/
 /collections/*
 !/collections/requirements.yml
@@ -241,3 +247,26 @@ __marimo__/
 /modules/*
 !/modules/requirements.txt
 !/modules/requirements.yml
+
+# Reviewed Eddie base entrypoint and IPA client wrapper.
+!/create_eddie.yaml
+!/roles/machines/
+/roles/machines/*
+!/roles/machines/ipa/
+
+# Reviewed project changelog.
+!/CHANGELOG.md
+
+# Complete reviewed Eddie provisioning dependencies and guard regression tests.
+!/eddie.yaml
+!/setup_hermes_vm.yaml
+!/destroy_hermes.yaml
+!/restore_hermes_gpu.yaml
+!/roles/hermes/
+!/roles/proxmox/create_vm/
+!/roles/proxmox/guarded_destroy/
+!/roles/machines/docker/
+!/roles/machines/network/
+!/tests/
+/tests/*
+!/tests/test_review_guards.py

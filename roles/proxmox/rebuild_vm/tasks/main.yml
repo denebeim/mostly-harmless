@@ -1,0 +1,26 @@
+- name: Check the reviewed rebuild target and dependencies
+  ansible.builtin.import_tasks: preflight.yml
+  tags:
+  - rebuild_preflight
+- name: Create a private local configuration-record directory
+  ansible.builtin.file:
+    path: '{{ playbook_dir }}/.ansible/rebuild-records'
+    state: directory
+    mode: '0700'
+  delegate_to: localhost
+  become: false
+- name: Preserve the inspected configuration privately before removal
+  ansible.builtin.copy:
+    content: '{{ rebuild_config.stdout }}'
+    dest: '{{ playbook_dir }}/.ansible/rebuild-records/{{ rebuild_vmid }}-{{ now(utc=true, fmt=''%Y%m%dT%H%M%S%f'')
+      }}.json'
+    mode: '0600'
+  delegate_to: localhost
+  become: false
+  no_log: true
+- name: Remove the reviewed guest under a digest-acquired Proxmox lock
+  ansible.builtin.include_role:
+    name: proxmox/guarded_destroy
+  vars:
+    guarded_destroy_vmid: "{{ rebuild_vmid }}"
+    guarded_destroy_config: "{{ rebuild_config.stdout }}"

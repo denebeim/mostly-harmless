@@ -1,0 +1,41 @@
+# =============================================================================
+# Hermes Agent CLI Configuration
+# Managed by Ansible - role: hermes
+# =============================================================================
+_config_version: 52
+
+# Database Configuration
+database:
+  journal_mode: "{{ hermes_db_journal_mode | default('wal') }}"
+
+# Runtime Limits
+runtime:
+  nofile_soft_limit: {{ hermes_runtime_nofile | default(4096) }}
+
+# Model & Provider Configuration
+model:
+  default: "{{ hermes_default_model | default('anthropic/claude-opus-4.6') }}"
+  provider: "{{ hermes_provider | default('auto') }}"
+{% if hermes_base_url is defined and hermes_base_url %}
+  base_url: "{{ hermes_base_url }}"
+{% endif %}
+
+# Execution Environment
+terminal:
+  backend: "{{ hermes_terminal_backend | default('local') }}"
+
+# Gateway Configuration
+gateway:
+  trust_env: true
+  signal_interrupt_grace_timeout: 1
+
+# Tool Execution & Guardrails
+tool_loop_guardrails:
+  max_iterations: {{ hermes_max_iterations | default(50) }}
+
+# Memory & Skills
+memory:
+  enabled: true
+
+skills:
+  auto_create: true

@@ -1,8 +1,6 @@
 collections:
   - name: ansible.posix
     version: 1.5.4
-  - name: freeipa.ansible_freeipa
-    version: 1.12.0
   - name: community.general
     version: 8.4.0
   - name: kubernetes.core
@@ -12,3 +10,5 @@ collections:
   - name: https://github.com/techno-tim/k3s-ansible.git
     type: git
     version: master
+  - name: freeipa.ansible_freeipa
+    version: 1.17.0

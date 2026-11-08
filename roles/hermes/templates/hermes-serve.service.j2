@@ -1,0 +1,21 @@
+[Unit]
+Description=Nous Research Hermes Agent Headless Backend Server (hermes serve)
+Documentation=https://hermes-agent.nousresearch.com/docs/reference/cli-commands
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User={{ hermes_user }}
+Group={{ hermes_group }}
+WorkingDirectory=/home/{{ hermes_user }}
+EnvironmentFile=-{{ hermes_home }}/.env
+Environment=HOME=/home/{{ hermes_user }}
+Environment=PATH=/home/{{ hermes_user }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart={{ hermes_bin }} serve --host {{ hermes_serve_host }} --port {{ hermes_serve_port }}
+Restart=on-failure
+RestartSec=5
+LimitNOFILE={{ hermes_runtime_nofile }}
+
+[Install]
+WantedBy=multi-user.target
