@@ -1,0 +1,222 @@
+---
+# Tasks for role: hermes
+# Installs and configures Nous Research Hermes Agent
+
+- name: Wait for automatic system updates / apt locks to clear
+  ansible.builtin.shell: while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1; do sleep 1; done;
+  changed_when: false
+
+- name: Install system dependencies for Hermes Agent
+  ansible.builtin.apt:
+    name:
+      - acl
+      - curl
+      - git
+      - python3
+      - python3-pip
+      - python3-venv
+      - build-essential
+      - libssl-dev
+      - libffi-dev
+      - libatomic1
+      - ca-certificates
+      - jq
+      - unzip
+      - tar
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Check if docker group exists
+  ansible.builtin.getent:
+    database: group
+    key: docker
+  failed_when: false
+  register: docker_group_check
+
+- name: If docker is installed the docker group should include {{ hermes_user }}
+  ansible.builtin.user:
+    name: "{{ hermes_user }}"
+    groups: docker
+    append: true
+  when: docker_group_check.ansible_facts.getent_group.docker is defined
+
+- name: Ensure Hermes directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ hermes_user }}"
+    group: "{{ hermes_group }}"
+    mode: "0755"
+  loop:
+    - "/home/{{ hermes_user }}/.hermes"
+    - "/home/{{ hermes_user }}/.hermes/memory"
+    - "/home/{{ hermes_user }}/.hermes/skills"
+    - "/home/{{ hermes_user }}/.local"
+    - "/home/{{ hermes_user }}/.local/bin"
+
+- name: Check if hermes binary is already installed
+  ansible.builtin.stat:
+    path: "{{ hermes_bin }}"
+  register: hermes_bin_stat
+
+- name: Download and install Hermes Agent via official installer
+  ansible.builtin.shell: |
+    set -e
+    set -o pipefail
+    curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --non-interactive \
+    {{ hermes_extra_install_args }}
+  args:
+    executable: /bin/bash
+  become: true
+  become_user: "{{ hermes_user }}"
+  environment:
+    HOME: "/home/{{ hermes_user }}"
+    USER: "{{ hermes_user }}"
+  changed_when: not hermes_bin_stat.stat.exists or (hermes_force_install | bool)
+  when: not hermes_bin_stat.stat.exists or (hermes_force_install | bool)
+
+- name: Ensure ~/.local/bin is in system profile PATH
+  ansible.builtin.copy:
+    dest: /etc/profile.d/hermes.sh
+    content: |
+      export PATH="$HOME/.local/bin:$PATH"
+    mode: "0644"
+
+- name: Ensure ~/.local/bin is in user .bashrc PATH
+  ansible.builtin.lineinfile:
+    path: "/home/{{ hermes_user }}/.bashrc"
+    line: 'export PATH="$HOME/.local/bin:$PATH"'
+    state: present
+
+- name: Deploy Hermes config.yaml
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "/home/{{ hermes_user }}/.hermes/config.yaml"
+    owner: "{{ hermes_user }}"
+    group: "{{ hermes_group }}"
+    mode: "0640"
+  notify: restart hermes-gateway
+
+- name: Deploy Hermes .env file
+  no_log: true
+  ansible.builtin.template:
+    src: env.j2
+    dest: "/home/{{ hermes_user }}/.hermes/.env"
+    owner: "{{ hermes_user }}"
+    group: "{{ hermes_group }}"
+    mode: "0600"
+  notify: restart hermes-gateway
+
+- name: Deploy Hermes gateway systemd unit
+  ansible.builtin.template:
+    src: hermes-gateway.service.j2
+    dest: /etc/systemd/system/hermes-gateway.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart hermes-gateway
+
+- name: Manage Hermes gateway service state
+  ansible.builtin.systemd:
+    name: hermes-gateway
+    enabled: "{{ hermes_gateway_enabled | bool }}"
+    state: "{{ 'started' if hermes_gateway_enabled | bool else 'stopped' }}"
+  when: hermes_gateway_manage_service | default(true)
+
+# =============================================================================
+# Self-healing guard: repair a Hermes install left broken by an interrupted
+# `hermes update`. An in-progress update atomically swaps in new lockfiles; if
+# the process is killed mid-fetch (e.g. a DNS/network flap,
+# OOM, SSH drop) the old uv.lock and flake.lock are left
+# deleted and the PM cannot bootstrap -- `hermes` then fails with "no
+# dependency environment is committed for this install" / "source-update
+# completion failed: ... uv.lock".
+#
+# On every playbook run we detect that state (`hermes --version` fails) and
+# repair in place on the next run by:
+#   1. restoring the deleted tracked lockfiles from the pinned release (HEAD)
+#   2. rebuilding the dependency environment with `hermes pm repair`
+#
+# HEAD is always the shipped release tag (e.g. v0.22.5): the installer checks
+# out a tag, so restoring tracked files to HEAD is the safe, known-good state.
+# This mirrors the manual recovery: git checkout HEAD -- uv.lock flake.lock
+# pm/uv.lock && hermes pm repair
+# =============================================================================
+- name: Locate the Hermes source checkout (for self-healing restore)
+  ansible.builtin.stat:
+    path: "{{ hermes_install_dir }}/.git"
+  register: _hermes_checkout_stat
+  check_mode: false
+
+- name: Detect a broken Hermes install (interrupted-update corruption)
+  ansible.builtin.command: "{{ hermes_bin }} --version"
+  register: _hermes_cli_health
+  changed_when: false
+  ignore_errors: true
+  check_mode: false
+  become: true
+  become_user: "{{ hermes_user }}"
+  environment:
+    HOME: "/home/{{ hermes_user }}"
+    PATH: "/home/{{ hermes_user }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+- name: Restore Hermes lockfiles deleted by an interrupted update
+  ansible.builtin.command: git checkout HEAD -- uv.lock flake.lock pm/uv.lock
+  args:
+    chdir: "{{ hermes_install_dir }}"
+  register: _hermes_restore
+  changed_when: true
+  when:
+    - _hermes_cli_health.rc is defined
+    - _hermes_cli_health.rc != 0
+    - _hermes_checkout_stat.stat.exists
+  become: true
+  become_user: "{{ hermes_user }}"
+  notify: restart hermes-gateway
+
+- name: Rebuild the Hermes dependency environment
+  ansible.builtin.command: "{{ hermes_bin }} pm repair"
+  register: _hermes_repair
+  changed_when: true
+  when:
+    - _hermes_cli_health.rc is defined
+    - _hermes_cli_health.rc != 0
+  become: true
+  become_user: "{{ hermes_user }}"
+  environment:
+    HOME: "/home/{{ hermes_user }}"
+    PATH: "/home/{{ hermes_user }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  timeout: 600
+  notify: restart hermes-gateway
+
+# =============================================================================
+# Cron scheduler — serve scheduled `hermes cron` jobs on a systemd timer.
+# `hermes cron tick` runs due jobs once and exits; the timer re-fires it.
+# `hermes cron tick --accept-hooks` auto-approves shell hooks (no TTY).
+# =============================================================================
+- name: Deploy Hermes cron systemd service unit
+  ansible.builtin.template:
+    src: hermes-cron.service.j2
+    dest: /etc/systemd/system/hermes-cron.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload systemd
+
+- name: Deploy Hermes cron systemd timer
+  ansible.builtin.template:
+    src: hermes-cron.timer.j2
+    dest: /etc/systemd/system/hermes-cron.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload systemd
+
+- name: Manage Hermes cron timer state
+  ansible.builtin.systemd:
+    name: hermes-cron.timer
+    enabled: "{{ hermes_cron_enabled | bool }}"
+    state: "{{ 'started' if hermes_cron_enabled | bool else 'stopped' }}"

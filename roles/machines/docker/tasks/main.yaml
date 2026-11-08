@@ -1,0 +1,55 @@
+---
+- name: end role if no docker needed
+  meta: end_play
+  when: "'tag_docker' not in group_names"
+
+- name: Configure permanent modules
+  blockinfile:
+    block: |
+      br_netfilter
+      overlay
+    path: /etc/modules-load.d/containerd
+    create: yes
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+
+- name: Configure current modules
+  modprobe:
+    name: "{{item}}"
+  loop:
+    - br_netfilter
+    - overlay
+
+- name: Disable swap
+  lineinfile:
+    dest: /etc/fstab
+    regexp: '(?i)^([^#][\S]+\s+(none|swap)\s+swap.*)'
+    line: '# \1'
+    backrefs: yes
+    state: present
+  register: noswap
+
+- name: "Disable swap"
+  command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+
+- ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- ansible.builtin.group:
+    name: docker
+    system: true
+    state: present
+
+- name: Remove legacy Docker APT source before package operations
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/docker.list
+    state: absent
+
+- name: Install Docker
+  ansible.builtin.include_role:
+    name: geerlingguy.docker
+    public: true

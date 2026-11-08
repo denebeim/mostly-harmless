@@ -1,0 +1,20 @@
+---
+- name: Read existing Ethernet DNS configuration
+  ansible.builtin.command: netplan get ethernets.eth0.nameservers
+  register: ethernet_dns
+  changed_when: false
+
+- name: Set explicit Hermes DNS configuration in existing Netplan source
+  ansible.builtin.command:
+    argv:
+      - netplan
+      - set
+      - 'ethernets.eth0.nameservers={addresses: [192.168.42.2], search: [local.deepthot.org]}'
+  when: >-
+    (ethernet_dns.stdout | from_yaml) != {'addresses': ['192.168.42.2'], 'search': ['local.deepthot.org']}
+  notify:
+    - Apply Hermes Netplan
+    - Clear automount resolver cache after DNS changes
+
+- name: Apply network configuration before identity configuration
+  ansible.builtin.meta: flush_handlers

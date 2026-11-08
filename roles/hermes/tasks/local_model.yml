@@ -1,0 +1,23 @@
+---
+- name: Deploy Hermes local model configuration
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "/home/{{ hermes_user }}/.hermes/config.yaml"
+    owner: "{{ hermes_user }}"
+    group: "{{ hermes_group }}"
+    mode: '0640'
+  notify: restart hermes-gateway
+
+- name: Deploy gateway unit compatible with installed Hermes runtime
+  ansible.builtin.template:
+    src: hermes-gateway.service.j2
+    dest: /etc/systemd/system/hermes-gateway.service
+    mode: '0644'
+  register: local_gateway_unit
+
+- name: Enable the runtime required by Hermes CLI
+  ansible.builtin.systemd_service:
+    name: hermes-gateway
+    enabled: true
+    daemon_reload: true
+    state: "{{ 'restarted' if local_gateway_unit is changed else 'started' }}"

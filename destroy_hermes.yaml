@@ -1,0 +1,69 @@
+---
+# Explicitly destructive smoke-test step, invoked separately from provisioning.
+- name: Destroy the reviewed disposable Hermes VM
+  hosts: heartogold
+  remote_user: root
+  gather_facts: false
+  tasks:
+    - name: Read exact VM configuration
+      ansible.builtin.command: pvesh get /nodes/heartogold/qemu/314/config --output-format json
+      register: target_config
+      changed_when: false
+      no_log: true
+
+    - name: Require the exact reviewed Hermes VM and disks
+      ansible.builtin.assert:
+        that:
+          - (target_config.stdout | from_json).name == 'hermes'
+          - not ((target_config.stdout | from_json).template | default(false) | bool)
+          - (target_config.stdout | from_json).scsi0.startswith('heartogold:314/')
+          - (target_config.stdout | from_json).efidisk0.startswith('heartogold:314/')
+          - (target_config.stdout | from_json).ide2.startswith('heartogold:314/')
+          - >-
+            (target_config.stdout | from_json).keys() | select('match', '^(scsi|sata|virtio|ide)[0-9]+$') | difference(['scsi0', 'ide2']) | length == 0
+          - (target_config.stdout | from_json).hostpci0 == '0000:81:00,pcie=1'
+          - >-
+            (target_config.stdout | from_json).keys() | select('match', '^(usb|unused)[0-9]+$') | list | length == 0
+        fail_msg: VM differs from the reviewed disposable Hermes target.
+      no_log: true
+
+    - name: Create private configuration record directory
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/.ansible/rebuild-records"
+        state: directory
+        mode: '0700'
+      delegate_to: localhost
+
+    - name: Preserve configuration before deletion
+      ansible.builtin.copy:
+        content: "{{ target_config.stdout }}"
+        dest: "{{ playbook_dir }}/.ansible/rebuild-records/hermes-314-{{ now(utc=true, fmt='%Y%m%dT%H%M%S') }}.json"
+        mode: '0600'
+      delegate_to: localhost
+      no_log: true
+
+    - name: Gracefully shut down Hermes
+      ansible.builtin.command: qm shutdown 314 --timeout 120
+
+    - name: Re-read target before destruction
+      ansible.builtin.command: pvesh get /nodes/heartogold/qemu/314/config --output-format json
+      register: stopped_config
+      changed_when: false
+      no_log: true
+
+    - name: Refuse an intervening configuration change
+      ansible.builtin.assert:
+        that:
+          - (stopped_config.stdout | from_json).digest == (target_config.stdout | from_json).digest
+      no_log: true
+
+    - name: Destroy only the reviewed VM and its allocated disks
+      ansible.builtin.command: qm destroy 314
+
+    - name: Verify VM 314 no longer exists
+      ansible.builtin.command: pvesh get /cluster/resources --type vm --output-format json
+      register: remaining_vms
+      changed_when: false
+      failed_when: >-
+        remaining_vms.stdout | from_json | selectattr('vmid', 'equalto', 314) | list | length != 0
+      no_log: true

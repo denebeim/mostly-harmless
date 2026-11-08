@@ -1,0 +1,47 @@
+---
+- name: Restore Hermes dedicated GPU and serial console
+  hosts: heartogold
+  remote_user: root
+  gather_facts: false
+  tasks:
+    - name: Read current VM configuration
+      ansible.builtin.command: qm config 314
+      register: vm_config
+      changed_when: false
+
+    - name: Configure dedicated K5200 and serial console
+      ansible.builtin.command:
+        argv: [qm, set, '314', --hostpci0, '0000:81:00,pcie=1', --serial0, socket, --vga, serial0, --nameserver, 192.168.42.2, --searchdomain, local.deepthot.org]
+      when: >-
+        'hostpci0: 0000:81:00,pcie=1' not in vm_config.stdout or
+        'vga: serial0' not in vm_config.stdout or
+        'nameserver: 192.168.42.2' not in vm_config.stdout or
+        'searchdomain: local.deepthot.org' not in vm_config.stdout
+      register: gpu_config
+
+    - name: Shut down Hermes to activate PCI hardware changes
+      ansible.builtin.command: qm shutdown 314 --timeout 60
+      when: gpu_config is changed
+
+    - name: Start Hermes with the restored GPU
+      ansible.builtin.command: qm start 314
+      when: gpu_config is changed
+
+    - name: Wait for Hermes SSH
+      ansible.builtin.wait_for:
+        host: 192.168.42.132
+        port: 22
+        delay: 5
+        timeout: 120
+      delegate_to: localhost
+
+    - name: Refresh guest SSH keys through the trusted hypervisor
+      ansible.builtin.include_role:
+        name: proxmox/ssh_host_key
+      vars:
+        newid: 314
+        vmname: hermes
+        ssh_host_key_names:
+          - hermes
+          - hermes.local.deepthot.org
+      tags: ssh_trust

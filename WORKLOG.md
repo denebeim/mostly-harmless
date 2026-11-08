@@ -218,3 +218,63 @@ At each meaningful work milestone, update:
 
 Use dates when known. Do not invent timestamps or imply continuous monitoring. This log is a
 session-maintained record, not an autonomous live feed.
+
+### 2026-11-07 — Restore Galaxy IPA dependency
+
+- Reference `~/ansible/deepthot-configuration/roles/machines/ipa` calls `freeipa.ansible_freeipa.ipaclient`. The collection was absent locally and from the current manifest.
+- Installed FreeIPA collection 1.17.0 into project-local collections and pinned that version in collections/requirements.yml, preserving existing manifest edits. Galaxy reported installation successful. No guest configuration changed.
+- The local machines/ipa wrapper is still absent and eddie.yaml does not invoke it. Review and restore the wrapper before enrollment automation runs.
+- Design target: DHCP reservations and DHCP-provided network settings; keep current Hermes identity until the later DNS rename.
+- Live services DHCP read is pending: SSH as ansible was rejected. Inspect reference connection settings next.
+- Diagnostic command output is appended to eddie-session.log; historical logs are not current-state evidence.
+
+### 2026-11-07 — Hermes static networking interim decision
+
+- Owner directs static networking for Hermes for now: IP 192.168.42.132/24, gateway 192.168.42.1, DNS 192.168.42.2, search domain local.deepthot.org. No networking change applied in this step.
+- Long-term design remains service-managed networking: when Eddie is created, automation should update its MAC in the Pi-hole TOML DHCP reservation, with DHCP supplying guest networking.
+- Private Pi-hole snapshot is ~/projects/pihole.toml; never commit it. Future deployment should use a .j2 template with protected secrets. Snapshot shows DHCP enabled and a Hermes DNS record, but no matching reservation in dhcp.hosts. External dnsmasq files are enabled and have not been inspected.
+- Next step: implement explicit static cloud-init settings and a reproducible correction for the existing Hermes guest, preserving other network configuration.
+
+### 2026-11-07 — Hermes user SSH milestone achieved
+
+- Added explicit static DNS/search settings to eddie.yaml and Proxmox create_vm IP configuration (module arguments nameservers/searchdomains); preserved current static IP and gateway. These Proxmox task changes have not been applied to VM metadata yet.
+- Added machines/network role, invoked before Docker, to correct existing eth0 Netplan DNS settings using netplan set. Applied that role successfully to Hermes (ok=3, changed=2, failed=0).
+- After DNS correction, short-name h2gt2g resolved and IPA returned denebeim with /nethome/denebeim. Autofs still reported its earlier DNS failure; restarting autofs cleared it. Added an autofs try-restart handler following network changes to reproduce the correction.
+- Verified SSH by hostname using `ssh -F /dev/null -XA -o BatchMode=yes denebeim@hermes`: exit 0; identity denebeim, HOME and PWD /nethome/denebeim, expected NFSv4 mount, Docker active, forwarded SSH_AUTH_SOCK and DISPLAY present. -F /dev/null bypasses the controller SSH configuration ownership/permissions error previously observed. No X application was launched.
+- Full eddie.yaml provisioning has not been rerun; machines/ipa wrapper restoration remains outstanding. Existing IPA enrollment worked for this milestone.
+- Diagnostic output remains in eddie-session.log. Private Pi-hole TOML was not copied or committed.
+
+### 2026-11-07 — Hermes Agent installed on Hermes
+
+- Applied existing local Hermes role after adding acl to its apt dependencies and selecting /bin/bash for installer shell (uses pipefail). Added no_log to environment-file deployment.
+- Ansible role completed: ok=20, changed=10, failed=0, unreachable=0. Installer took several minutes; observed runtime setup and storage I/O waits, with no recent kernel warnings.
+- Verified Hermes Agent v0.23.0, stable, Python 3.14.9; --version and --help succeed as service user hermes. Cron timer active; messaging gateway disabled per existing defaults.
+- No model inference verified: Ollama was inactive at preflight, and no cloud credentials were supplied in this isolated role run. Defaults select auto provider and anthropic/claude-opus-4.6; model/provider configuration is the next step.
+- Full eddie.yaml provisioning remains untested; role run used targeted inline inventory to avoid unrelated provisioning changes. All diagnostic output appended to eddie-session.log.
+
+### 2026-11-07 — Restore K5200 passthrough
+
+- Host GPU 0000:81:00.0 (Quadro K5200) and audio 81:00.1 were bound to vfio-pci; VM 314 had no hostpci configuration. No matching GPU assignment found in other VM configs. Missing PCI attachment explains guest GPU absence independently of driver licensing. Prior working assignment mechanism not recovered from reference automation or selected shell history.
+- Owner authorized restoring passthrough. Added hostpci0 0000:81:00,pcie=1 and serial display settings to eddie.yaml; parameterized vga/serial in create_vm. Added restore_hermes_gpu.yaml and applied hardware changes with graceful shutdown/start. Ansible completed without failures.
+- Trusted guest-agent verification confirms guest sees K5200 at 01:00.0 and associated audio device. NVIDIA utilities and proprietary guest driver are not installed; compute acceleration remains unverified.
+- After restart SSH keys were newly generated and DNS search domain was empty. Verified replacement keys via trusted guest agent and refreshed known_hosts with existing role and private backup. Set Proxmox metadata nameserver/searchdomain explicitly and reapplied existing guest DNS role; its autofs restart handler restored NFS home. The precise cloud-init trigger for key regeneration is not established.
+- Final ssh -XA as denebeim succeeds, starts in /nethome/denebeim on the expected NFS mount; Docker active.
+- Next: guest NVIDIA driver and Ollama compatibility with legacy K5200, before claiming GPU inference works.
+
+### 2026-11-07 — GPU-backed local Hermes inference verified
+
+- Restored setup_hermes_vm.yaml based on reference driver/Ollama flow. Installs matching kernel headers, nvidia-driver-470/nvidia-utils-470 without recommends, loads nvidia module, installs Ollama, and starts its local API. Excluded inherited unconditional NVIDIA container-runtime installation; no container GPU runtime was needed for native Ollama.
+- NVIDIA DKMS build succeeded on 6.8.0-149-generic; nvidia-smi reports Quadro K5200, 8126 MiB, 470.256.02. No reboot required.
+- Ollama 0.40.15 installed and API responds. Installer environment now pins 0.40.15 for future installs. Pulled reference qwen3.5:4b (Q4_K_M, 4.2B).
+- CUDA documentation excludes this legacy card/driver, but actual Ollama auto-detected Vulkan and offloaded 33/33 model layers. ollama ps reports 100% GPU. Direct inference returned 'Eddie is online.' (6 output tokens in approximately 0.52s, excluding prompt processing and cold load); this is a smoke test, not a representative benchmark.
+- Configured Hermes provider custom, model qwen3.5:4b, endpoint http://127.0.0.1:11434/v1 using its existing config template. Mirrored model/gateway settings in eddie.yaml so subsequent role runs preserve them.
+- Initial Hermes prompt failed service_identity_unverified. Installed Hermes v0.23.0 requires a gateway runtime even for CLI requests; inherited disabled unit used EnvironmentFile and --no-supervise, conflicting with runtime identity checks. Updated template to explicit HOME/HERMES_HOME and --external-supervisor; .env remains loaded by Hermes itself. Enabled gateway through reproducible local_model role tasks.
+- End-to-end Hermes CLI test as service user hermes returned 'Hermes is online.' with exit 0. Gateway active; Ollama reports 100% GPU. No cloud inference credentials were needed or supplied. This verifies a simple reply; tool execution and long-context agent workloads remain untested.
+- Driver/Ollama installation play: failed=0; model deployment and gateway correction: failed=0. Full eddie.yaml end-to-end provisioning still outstanding (including IPA wrapper restoration). Logs appended to eddie-session.log.
+
+### 2026-11-07 — Local checkpoint before destructive rebuild smoke test
+
+- Owner requested committing current work, then destroying Hermes for a rebuild smoke test. Reviewed operational playbooks and supporting roles are explicitly included in the local commit; private inventory, credentials, Pi-hole snapshot, dependency installations, logs, and caches remain excluded. No push requested.
+- Added separate destroy_hermes.yaml with exact VM identity/disk checks, private configuration record, graceful shutdown, configuration digest guard, and post-removal verification. Physical passthrough hardware and unrelated VMs/storage are not deletion targets.
+- Pi-hole web endpoint http://services/admin/ redirects to its login page; web authentication requires an existing usable password, not available in this session. No Pi-hole settings changed.
+- Checkpoint captures current working installation automation, not proof of a clean rebuild. IPA wrapper restoration and full end-to-end eddie.yaml execution remain outstanding.
