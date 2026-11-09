@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Hermes application entrypoint; see LICENSE for the GNU GPL version 3.
+#
+# Configures Hermes on an existing VM selected by vm.name, or on inventory hosts
+# tagged hermes. vm.yaml calls this after provisioning, identity, Docker, GPU and
+# Ollama roles; eddie.yaml supplies Eddie's machine and local-inference settings.
+#
+# The shared Hermes role creates the service identity and private persistent
+# data, starts the pinned Docker image, preserves native rollback state, manages
+# the local profile, and starts the shared default-profile gateway. It installs
+# the Docker-backed host command and global shell PATH integration, selects the
+# local CLI profile, disables local-profile shared metrics, and optionally checks
+# inference. Existing data is retained; this playbook never deletes the VM.
+#
+# Prerequisites: reachable guest, working Ansible become, Docker, and configured
+# inference backend. IPA/host Docker authorization belongs to the Docker role.
+# Applications run as the dedicated container service UID/GID; the image's s6
+# supervision runs as root. The agent receives no host Docker socket.
+#
+# Normal full convergence: ansible-playbook eddie.yaml
+# Existing VM, application only: ansible-playbook hermes.yaml -e @vm-spec.json
+# Supply the same model/provider/base URL variables as the machine declaration.
+# Set hermes_verify_inference=false to skip the model request during convergence.
+# Interactive CLI: SSH into Eddie and type hermes; use -p to select another profile.
+---
+- name: Configure Docker-based Hermes on tagged guests
+  hosts: "{{ vm.name | default('tag_hermes') }}"
+  become: true
+  gather_facts: true
+  roles:
+    - role: hermes
+      when: "'tag_hermes' in group_names"

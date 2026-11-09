@@ -1,0 +1,13 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Managed by Ansible. Application and configuration live in the Hermes container.
+set -eu
+
+set -- -i --user {{ (ansible_facts.getent_passwd[hermes_user][1] ~ ':' ~ ansible_facts.getent_passwd[hermes_user][2]) | quote }} \
+    --env HOME=/opt/data --env HERMES_HOME=/opt/data \
+    {{ hermes_container_name | quote }} /opt/hermes/bin/hermes "$@"
+if [ -t 0 ] && [ -t 1 ]; then
+    # Allocate a container terminal only for an interactive host terminal.
+    set -- -t "$@"
+fi
+exec /usr/bin/docker exec "$@"

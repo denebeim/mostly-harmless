@@ -4,20 +4,36 @@
     name: geerlingguy.docker
     public: true
 
-- name: Read Docker group membership when explicitly managed
-  ansible.builtin.getent:
-    database: group
-    key: docker
-  when: vm.docker_members is defined
+- name: Manage local Docker socket membership
+  when: vm.docker_members is defined or vm.docker_ipa_group is defined
+  block:
+    - name: Read the configured IPA Docker group through SSSD
+      ansible.builtin.getent:
+        database: group
+        key: "{{ vm.docker_ipa_group }}"
+        service: sss
+      register: ipa_docker_group
+      when: vm.docker_ipa_group is defined
 
-- name: Enforce explicitly declared Docker group membership
-  ansible.builtin.command:
-    argv: [gpasswd, -M, "{{ vm.docker_members | join(',') }}", docker]
-  when:
-    - vm.docker_members is defined
-    - >-
-      (ansible_facts.getent_group.docker[2].split(',') | reject('equalto', '') | sort | list)
-      != (vm.docker_members | sort)
+    - name: Read the host-local Docker group
+      ansible.builtin.getent:
+        database: group
+        key: docker
+        service: files
+
+    - name: Enforce the union of declared accounts and IPA group members
+      ansible.builtin.command:
+        argv: [gpasswd, -M, "{{ desired_docker_members | join(',') }}", docker]
+      vars:
+        ipa_members: >-
+          {{ ipa_docker_group.ansible_facts.getent_group[vm.docker_ipa_group][2].split(',')
+             if vm.docker_ipa_group is defined else [] }}
+        desired_docker_members: >-
+          {{ ((vm.docker_members | default([])) + ipa_members)
+             | reject('equalto', '') | unique(case_sensitive=true) | sort | list }}
+      when: >-
+        (ansible_facts.getent_group.docker[2].split(',') | reject('equalto', '') | sort | list)
+        != desired_docker_members
 
 - name: Register the enrolled Docker host in central IPA authorization
   ansible.builtin.command:

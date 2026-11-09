@@ -125,10 +125,12 @@
   register: hermes_local_socket
 - name: Start or restart the gateway that serves both profiles
   ansible.builtin.command:
-    argv: [docker, exec, -u, "{{ ansible_facts.getent_passwd[hermes_user][1] }}", "{{ hermes_container_name }}", hermes, gateway, "{{ 'restart' if hermes_profile_config.changed and hermes_local_socket.stat.exists else 'start' }}"]
+    argv: [docker, exec, -u, "{{ ansible_facts.getent_passwd[hermes_user][1] }}", "{{ hermes_container_name }}", hermes, -p, default, gateway, "{{ 'restart' if hermes_profile_config.changed and hermes_local_socket.stat.exists else 'start' }}"]
   when: hermes_profile_config.changed or not hermes_local_socket.stat.exists
   register: hermes_gateway_start
   changed_when: "'already running' not in (hermes_gateway_start.stdout ~ hermes_gateway_start.stderr)"
+- name: Install the host CLI and select its initial profile
+  ansible.builtin.import_tasks: cli.yml
 - name: Verify configured local inference
   ansible.builtin.include_tasks: verify.yml
   when: hermes_provider == 'custom' and hermes_verify_inference | bool
