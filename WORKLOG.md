@@ -461,3 +461,9 @@ session-maintained record, not an autonomous live feed.
 - GPL notices also cover newly authored launcher, global PATH fragment and CLI tasks. No claim to relicense upstream Hermes or imported third-party roles.
 - Includes pending IPA-group-to-local-Docker membership convergence because fresh-login denebeim access must be reproducible, not a manual host exception. The separate pre-existing IPA enabled-flag validation edit remains outside this Hermes change.
 - No new live deployment or heavy tests for this entrypoint extraction. Preserve existing operational acceptance evidence and pending clean-rebuild/terminal limitations.
+
+### 2026-11-09 — Published Hermes follow-up
+
+- Committed implementation and documentation as 943d7d3 on codex/4-eddie-hermes-docker and pushed without rewriting branch history.
+- Opened PR #10: https://github.com/denebeim/mostly-harmless/pull/10 against main, following up issue #4. PR describes actual acceptance evidence, terminal warning, response latency and untested rebuild.
+- eddie.yaml and hermes.yaml syntax checks and staged diff checks passed. No private logs, credentials or ignored operational files included. Separate pre-existing IPA enabled-flag edit remains uncommitted; preserved stash backup retained.
