@@ -1,14 +1,7 @@
 ---
-- name: Apply gateway changes before its model check
-  ansible.builtin.meta: flush_handlers
-
 - name: Verify local Hermes inference
   ansible.builtin.command:
-    argv: [timeout, '300', /home/hermes/.local/bin/hermes, chat, -Q, --oneshot, --reasoning, none, --max-turns, '1', -q, 'Reply with exactly: Eddie is online. Do not use tools.']
-  become_user: hermes
-  environment:
-    HOME: /home/hermes
-    PATH: /home/hermes/.local/bin:/usr/local/bin:/usr/bin:/bin
+    argv: [timeout, '300', docker, exec, -u, "{{ ansible_facts.getent_passwd[hermes_user][1] }}", "{{ hermes_container_name }}", hermes, -p, local, chat, -Q, --oneshot, --reasoning, none, --max-turns, '1', -q, 'Reply with exactly: Eddie is online. Do not use tools.']
   register: eddie_local_reply
   retries: 2
   delay: 5

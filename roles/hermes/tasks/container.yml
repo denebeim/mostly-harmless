@@ -1,0 +1,134 @@
+---
+- name: Ensure the local Hermes group exists
+  ansible.builtin.group:
+    name: "{{ hermes_group }}"
+- name: Ensure the local Hermes account exists
+  ansible.builtin.user:
+    name: "{{ hermes_user }}"
+    group: "{{ hermes_group }}"
+    home: "/home/{{ hermes_user }}"
+    create_home: true
+- name: Read local Hermes identity
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ hermes_user }}"
+- name: Create private persistent container data
+  ansible.builtin.file:
+    path: "{{ hermes_data_dir }}"
+    state: directory
+    owner: "{{ hermes_user }}"
+    group: "{{ hermes_group }}"
+    mode: '0700'
+- name: Inspect native service units
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ item }}"
+  loop: [hermes-gateway.service, hermes-cron.timer, hermes-cron.service]
+  register: hermes_native_units
+- name: Start the pinned official image with native supervision
+  community.docker.docker_container:
+    name: "{{ hermes_container_name }}"
+    image: "{{ hermes_image }}"
+    pull: missing
+    state: started
+    restart_policy: unless-stopped
+    command: [sleep, infinity]
+    network_mode: host
+    privileged: false
+    devices: "{{ hermes_gpu_devices }}"
+    env:
+      HERMES_UID: "{{ ansible_facts.getent_passwd[hermes_user][1] }}"
+      HERMES_GID: "{{ ansible_facts.getent_passwd[hermes_user][2] }}"
+      HERMES_DASHBOARD: '0'
+      HERMES_GATEWAY_BOOTSTRAP_STATE: running
+    volumes:
+      - "{{ hermes_data_dir }}:/opt/data:rw"
+    log_driver: json-file
+    log_options:
+      max-size: 10m
+      max-file: '3'
+- name: Wait for container bootstrap
+  ansible.builtin.command:
+    argv: [docker, exec, "{{ hermes_container_name }}", test, -f, /opt/data/config.yaml]
+  register: hermes_bootstrap
+  until: hermes_bootstrap.rc == 0
+  retries: 30
+  delay: 2
+  changed_when: false
+- name: Inspect the local profile
+  ansible.builtin.stat:
+    path: "{{ hermes_data_dir }}/profiles/local/config.yaml"
+  register: hermes_local_profile
+- name: Create a separate local profile without cloning default configuration
+  ansible.builtin.command:
+    argv: [docker, exec, -u, "{{ ansible_facts.getent_passwd[hermes_user][1] }}", "{{ hermes_container_name }}", hermes, profile, create, local, --no-alias]
+  when: not hermes_local_profile.stat.exists
+- name: Check native installation to preserve for rollback
+  ansible.builtin.stat:
+    path: "{{ hermes_home }}/config.yaml"
+  register: hermes_native_config
+- name: Inspect migration marker
+  ansible.builtin.stat:
+    path: "{{ hermes_data_dir }}/.native-migrated"
+  register: hermes_migrated
+- name: Disable any native gateway and timer left on the host
+  ansible.builtin.systemd_service:
+    name: "{{ item.item }}"
+    state: stopped
+    enabled: false
+  loop: "{{ hermes_native_units.results[:2] }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stat.exists
+- name: Stop any in-flight native cron tick before migration
+  ansible.builtin.systemd_service:
+    name: hermes-cron.service
+    state: stopped
+  when: hermes_native_units.results[2].stat.exists
+- name: Migrate native state once with rollback on failure
+  when: hermes_native_config.stat.exists and not hermes_migrated.stat.exists
+  block:
+    - name: Copy native state into local profile without install trees or runtime locks
+      become_user: "{{ hermes_user }}"
+      ansible.builtin.script:
+        cmd: "migrate_data.py {{ hermes_home | quote }} {{ (hermes_data_dir ~ '/profiles/local') | quote }}"
+        executable: /usr/bin/python3
+      no_log: true
+    - name: Mark completed state copy
+      ansible.builtin.copy:
+        dest: "{{ hermes_data_dir }}/.native-migrated"
+        content: "Native data retained in {{ hermes_home }} for rollback.\n"
+        owner: "{{ hermes_user }}"
+        group: "{{ hermes_group }}"
+        mode: '0600'
+  rescue:
+    - name: Restore the native gateway after a failed migration
+      when: hermes_native_units.results[0].stat.exists
+      ansible.builtin.systemd_service:
+        name: hermes-gateway.service
+        enabled: true
+        state: started
+    - name: Stop after migration failure
+      ansible.builtin.fail:
+        msg: Container state migration did not complete; original native data is intact.
+- name: Configure only the local inference profile
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ hermes_data_dir }}/profiles/local/config.yaml"
+    owner: "{{ hermes_user }}"
+    group: "{{ hermes_group }}"
+    mode: '0600'
+  no_log: true
+  register: hermes_profile_config
+- name: Inspect the shared gateway socket
+  ansible.builtin.stat:
+    path: "{{ hermes_data_dir }}/gateway.sock"
+  register: hermes_local_socket
+- name: Start or restart the gateway that serves both profiles
+  ansible.builtin.command:
+    argv: [docker, exec, -u, "{{ ansible_facts.getent_passwd[hermes_user][1] }}", "{{ hermes_container_name }}", hermes, gateway, "{{ 'restart' if hermes_profile_config.changed and hermes_local_socket.stat.exists else 'start' }}"]
+  when: hermes_profile_config.changed or not hermes_local_socket.stat.exists
+  register: hermes_gateway_start
+  changed_when: "'already running' not in (hermes_gateway_start.stdout ~ hermes_gateway_start.stderr)"
+- name: Verify configured local inference
+  ansible.builtin.include_tasks: verify.yml
+  when: hermes_provider == 'custom' and hermes_verify_inference | bool
