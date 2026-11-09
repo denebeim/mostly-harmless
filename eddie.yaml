@@ -19,6 +19,9 @@
     hermes_default_model: qwen3.5:4b
     hermes_provider: custom
     hermes_base_url: http://127.0.0.1:11434/v1
-    hermes_gateway_enabled: true
     ollama_listen_host: 0.0.0.0
     ollama_verify_lan: true
+    hermes_gpu_devices:
+      - /dev/dri:/dev/dri
+      - /dev/nvidia0:/dev/nvidia0
+      - /dev/nvidiactl:/dev/nvidiactl

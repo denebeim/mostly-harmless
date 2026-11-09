@@ -283,3 +283,6 @@ __marimo__/
 !/scripts/
 /scripts/*
 !/scripts/log-session.py
+
+!/HANDOFF.md
+!/HERMES-DESKTOP.md

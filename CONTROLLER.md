@@ -38,7 +38,16 @@ curl --fail --noproxy '*' http://192.168.42.132:11434/api/version
 curl --fail --noproxy '*' http://192.168.42.132:11434/v1/models
 ```
 
-Laptop files remain the source of truth. Docker migration and desktop/server workload split are tracked separately in issues #4 and #5. The old one-off recovery entrypoints remain available in Git history, not as current operational playbooks.
+Hermes runs in the pinned official Docker image. Its private persistent data is under `/opt/hermes/data`, with a shipped `default` profile and an Ansible-managed `local` profile that uses Ollama. Both profiles use one shared gateway. The image supervises the gateway as the local Hermes UID. Ollama and its NVIDIA/Vulkan driver stay on the host; container-to-host inference uses loopback. The agent is not given the host Docker socket or Joy’s home directory. The dashboard is disabled.
+
+On Eddie, an authorized administrator can list profiles and open the local CLI:
+
+```bash
+sudo docker exec -u hermes hermes hermes profile list
+sudo docker exec -it -u hermes hermes hermes -p local chat
+```
+
+The original native installation and files are retained for rollback; its services are disabled after migration. See `HANDOFF.md` for state and rollback. Laptop files remain the source of truth; see `HERMES-DESKTOP.md` for the proposed workload split. The old one-off recovery entrypoints remain in Git history.
 
 ## Verification
 

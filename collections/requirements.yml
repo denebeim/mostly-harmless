@@ -12,3 +12,5 @@ collections:
     version: master
   - name: freeipa.ansible_freeipa
     version: 1.17.0
+  - name: community.docker
+    version: 4.8.1
