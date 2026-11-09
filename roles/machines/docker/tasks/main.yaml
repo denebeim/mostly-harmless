@@ -18,3 +18,15 @@
     - >-
       (ansible_facts.getent_group.docker[2].split(',') | reject('equalto', '') | sort | list)
       != (vm.docker_members | sort)
+
+- name: Register the enrolled Docker host in central IPA authorization
+  ansible.builtin.command:
+    argv: [/usr/bin/python3, '-', "{{ ipa_docker_fqdn }}"]
+    stdin: "{{ lookup('ansible.builtin.file', role_path ~ '/files/register_ipa_host.py') }}"
+  delegate_to: localhost
+  become: false
+  register: ipa_docker_registration
+  changed_when: ipa_docker_registration.stdout == 'registered'
+  vars:
+    ipa_docker_fqdn: "{{ (vm.name ~ '.' ~ (vm.domain | default('local.deepthot.org'))) if vm is defined else ansible_facts.fqdn }}"
+  when: "'tag_ipa' in group_names"
