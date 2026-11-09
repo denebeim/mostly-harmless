@@ -21,7 +21,7 @@ source .envrc
 python3 scripts/log-session.py .venv/bin/ansible-playbook eddie.yaml --ssh-common-args='-F /dev/null'
 ```
 
-The private `.envrc` selects the project Python and inventory environment. A valid controller Kerberos ticket (`kinit admin` if needed) is required only for a new `ipa` client enrollment, not for untagged guests or the local Hermes service user.
+The private `.envrc` selects the project Python and inventory environment. A valid controller Kerberos ticket (`kinit admin` if needed) is required for a new `ipa` enrollment and for managing the Docker sudo rule on hosts with both `ipa` and `docker` tags. Untagged guests and the local Hermes account do not need a ticket.
 
 `create_vm.yaml` provisions/base-bootstraps, `join_deepthot.yaml` joins tagged clients, and `install_docker.yaml` configures tagged Docker hosts. `vm.yaml` composes these and the optional applications. Invoke a shared entrypoint with a private `-e @vm-spec.json` declaration, or use a minimal machine file such as `eddie.yaml`. Destructive cleanup is a separately reviewed operation, never implicit in provisioning.
 
@@ -48,6 +48,12 @@ sudo docker exec -it -u hermes hermes hermes -p local chat
 ```
 
 The original native installation and files are retained for rollback; its services are disabled after migration. See `HANDOFF.md` for state and rollback. Laptop files remain the source of truth; see `HERMES-DESKTOP.md` for the proposed workload split. The old one-off recovery entrypoints remain in Git history.
+
+## Central Docker administration
+
+Authenticate at SSH login. IPA group `docker-admins` controls passwordless `sudo docker` through rule `docker-admin-access` on explicitly listed enrolled hosts. This is root-equivalent access; manage the group in IPA. Keep the host-local `docker` group for service accounts. No Docker TCP listener is needed.
+
+The directory policy is a POSIX `docker-admins` group, the `/usr/bin/docker` sudo command, and the enabled `docker-admin-access` rule for that group and command with option `!authenticate` and order 100. The Docker role adds the enrolled FQDN idempotently for guests tagged both `docker` and `ipa`, using the controller ticket. Direct host membership was verified on this deployment. On retiring a host, remove its rule membership and IPA host record, then remove its scoped SSH trust artifacts. A Docker-only or DMZ VM is outside the IPA rule.
 
 ## Verification
 
