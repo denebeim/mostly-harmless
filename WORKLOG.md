@@ -383,3 +383,81 @@ session-maintained record, not an autonomous live feed.
 - PR #7 squash-merged at fdec47d and closes #4/#5. Removed ignored scratch test playbooks/inventory; kept private rollback data and log.
 - Owner requested centrally managed Docker administration and login-once authorization as the broader design. Created IPA POSIX group docker-admins with denebeim, and sudo rule docker-admin-access for /usr/bin/docker, order 100, !authenticate, explicitly scoped to verified enrolled hosts. Hostgroup-only matching did not surface in SSSD; direct Eddie membership did. Removed temporary hostgroup and kept local Eddie docker group unchanged. Passwordless sudo Docker verified from fresh SSH on Eddie.
 - Scoped rule to Mailcow and Mastodon after guest agent confirmed Docker and enrolled host identities. Their SSSD refreshes failed because root filesystems were already full. Regenerable APT cache cleanup restored both SSSD services without touching logs or Docker data. Mailcow still had IPA DNS resolution failures; Mastodon reached LDAP but needs verified sudo. Mailu lacks a matching directory host record, DMZ is not enrolled, and stopped guests were excluded. Opened #8 for these remaining hosts and durable capacity fixes. Added idempotent host registration to the IPA+Docker role path; live repeat against Eddie returned already registered.
+
+- Addressed Sourcery’s IPA enabled-flag finding from PR #9. Docker host registration now requires an explicit enabled value and rejects disabled or missing flags before any directory write.
+
+- Added denebeim to Eddie’s local docker group for direct socket access and declared both hermes and denebeim in eddie.yaml. The socket is root:docker with mode 0660. Plain docker ps listed Hermes from a fresh SSH login as denebeim. Eddie playbook syntax and git diff checks passed.
+
+- Superseded the per-user Eddie Docker declaration. The Docker role reconciles local service accounts with the IPA docker-admins members resolved through SSSD. Verified the membership tasks on Eddie with zero changes.
+
+## 2026-11-09 — Recover November 8 Docker/CLI context
+
+- Read repository operating contract, historical worklog, handoff, current branches and diffs, Eddie declaration and Hermes container/migration/verification roles. Recovered additional November 8 evidence from the ignored private session log. Prior chat transcripts are unavailable through current tools; no claim of having reviewed them.
+- Current local branch is main at 6aafdb0, with six pre-existing modified files covering documentation, Eddie Docker group policy and IPA registration validation. Preserved all pending changes; remote refs have not been refreshed. The removed setup_hermes_vm.yaml is historical; shared roles/hermes owns current deployment.
+- Verified from retained log: Docker CLI v0.23.0; single observed bind mount /opt/hermes/data → /opt/data; UID 1001 CLI HOME=/opt/data and HERMES_HOME=/opt/data. Profile listing showed default Claude/auto and local Qwen/custom. Direct Ollama native and OpenAI-compatible requests returned OK later that evening; local gateway reported the default-profile multiplexer. Native host launcher still targeted the original installation when inspected. Earlier successful cutover inference remains historical acceptance, not proof of current interactive operation.
+- Owner-reported November 8 checkpoint (not independently rechecked here): root container/s6 supervision with actual gateway/model UID/GID 1001, Privileged=false, no explicit Docker user namespace mode, working absolute CLI version command, and interactive TUI provider prompt.
+- Hypotheses: unqualified CLI selects an unconfigured default provider; CLI/gateway profile or environment differs; required provider credentials are unavailable. Configuration invisibility and its cause remain unverified. Existing logged HOME/HERMES_HOME and profile discovery argue against assuming the persistent mount is absent.
+- Updated CONTROLLER.md and HANDOFF.md to separate container root from application identity, qualify CLI acceptance, preserve rollback history and identify the configuration boundary as the next task. mostly-harmless remains authoritative; deepthot-configuration is legacy reference.
+- Next: one read-only comparison of selected paths/profile/model/provider and allowlisted CLI/gateway environment; then choose the smallest correction from evidence. Host launchers for hermes and denebeim remain deferred until this is understood. No infrastructure changes made during documentation recovery.
+
+### 2026-11-09 — First live CLI configuration-boundary diagnostic
+
+- Read-only comparison succeeded over SSH from benjymouse as hermes, running container Python as UID/GID 1001. HOME and HERMES_HOME both /opt/data, cwd /opt/hermes. Both config files were readable and owned by UID 1001; narrowly selected model/provider fields remain default Claude/auto and local Qwen/custom.
+- Previously logged gateway PID 195 currently has UID 1001, cwd /opt/data and the same HOME/HERMES_HOME. Other gateway-command-line matches include service/log helpers with HOME=/root but HERMES_HOME=/opt/data; they were not classified as gateway/model applications by this diagnostic.
+- No HERMES_PROFILE or HERMES_PROFILE_NAME in the allowlisted CLI environment. Effective profile selection and credential availability remain unverified. Shared HERMES_HOME and readable files weaken the missing-configuration hypothesis; profile selection remains the leading explanation to test.
+- Diagnostic setup failures: local SSH configuration ownership check required the documented -F /dev/null; sandbox networking required escalation; container system python3 lacks PyYAML, so the same read-only diagnostic was retried with standard-library inspection of only model-block default/provider lines. No dependencies installed or remote files changed. Successful output is in the private session log with BEGIN/END markers.
+- Next single diagnostic: read installed CLI profile-selection logic and active-profile metadata, then test explicit local TUI selection. No host launcher or infrastructure changes made.
+
+### 2026-11-09 — Owner priority clarification
+
+- Sole current goal: get as much intelligence working locally as possible. Local resources first; focus remains Eddie/Hermes local inference and CLI recovery. No unrelated work has begun.
+- Owner reports Mastodon and the mail subsystem are entirely down. This is reported state, not a fresh diagnostic; repairs remain outside the current scope. Earlier historical service observations must not be read as current availability.
+- Google account access and ChatGPT secretarial workflows are desired future work for a separate session; no connections or account changes initiated.
+- Continue one diagnostic at a time and log commands/output through scripts/log-session.py to eddie-session.log.
+
+### 2026-11-09 — Stale Desktop tunnel log noise
+
+- Identified leftover local SSH PID 2759191 forwarding 127.0.0.1:19120 to Eddie port 19120 from the November 8 temporary Desktop experiment. Repeated channel-open connection refusals were burying current session entries; November 9 work was present in the log.
+- Sent SIGTERM only after checking the process was still ssh with the exact experimental forwarding argument. Main Hermes container/gateway and persistent configuration were not changed. Existing log history retained.
+
+### 2026-11-09 — Desktop experiment cleanup verified
+
+- Owner requested completion of last nights Desktop SSH experiment cleanup. Host-level inspection found no remaining SSH local forwards after the identified stale tunnel was stopped.
+- Read-only Eddie inspection found no hermes-desktop-test container, no TCP listeners on experimental ports 19119/19120/19121, and no matching host-visible Hermes/Python/timeout serve processes in the inspected executable-name set.
+- No additional cleanup targets found. Main Hermes services and persistent data retained; session log history preserved. All inspection output recorded through the session logger.
+
+### 2026-11-09 — Docker-backed host CLI implementation
+
+- Owner authorizes autonomous local-equipment work toward working host CLI and local inference, with maintained playbooks and lightweight verification only. A later zero-to-configured rebuild is the acceptance target, not authorization to delete Eddie now. No unrelated host/application work.
+- Read installed main.py profile pre-parser and profile helpers. No active_profile file existed; absent explicit -p, the CLI retained default, selecting shipped Claude/auto instead of local Qwen/custom. Files/environment were available: this was profile selection, not a missing persistent mount.
+- Added roles/hermes/tasks/cli.yml and templates/hermes.sh.j2, imported by the existing container role. Installs root-owned /usr/local/bin/hermes; passes arbitrary arguments to absolute container CLI using docker exec -i, adds -t only when stdin/stdout are terminals, uses discovered service UID:GID and explicit HOME/HERMES_HOME=/opt/data. Does not use sudo or mount the host socket into the agent.
+- Manages active_profile=local (hermes_cli_profile default); preserves old service-account command as ~/.local/bin/hermes.native and replaces its original path with a symlink. Explicit profile flags still work. Shared-gateway role lifecycle invocation now explicitly selects default to avoid dependence on sticky CLI profile.
+- Applied owning role CLI tasks through a temporary /tmp invocation only; no retained repair playbook, full VM run, package upgrades or gateway restart. A repeat exposed symlink target ownership drift; setting follow=false fixed it. Final targeted convergence: ok=7, changed=0, failed=0, skipped=1.
+- Fresh SSH as both hermes and denebeim resolved /usr/local/bin/hermes, reported v0.23.0/install method docker, and listed local Qwen as active. Actual ssh -tt host hermes launch as denebeim reached local/Qwen interactive prompt without provider setup and exited cleanly.
+- Interactive telemetry choice was misread: confirmation reported sharing enabled despite intended opt-out. Immediately called the installed save_consent(False, False) API for local; it reported enabled=false, send=false, decided=true, reask=false. No assertion about whether any metrics were transmitted during that short interval. Added the explicit opt-out and offer_version=2 to the maintained local template and converged it without restarting gateway.
+- Syntax check passed with explicit static inventory; default inventory invocation initially warned that its system interpreter lacked six. No dependencies changed. Dynamic inventory/controller environment and full rebuild remain untested this session.
+- One host-command local inference request is pending (300-second bound). Ollama status shows qwen3.5:4b resident at 100% GPU, 65536 context; local gateway status reports the shared default multiplexer. No additional inference requests launched.
+
+### 2026-11-09 — Host CLI/local agent accepted
+
+- The single bounded local request, issued through plain host hermes as denebeim, returned exactly 'Eddie is online.' and agent_exit=0. Active profile was local/Qwen/Ollama. Response took several minutes; no speed claim.
+- Combined acceptance: both users resolve the Docker-backed command and active local profile; interactive denebeim launch reaches local/Qwen chat without provider setup; one local inference succeeds. Targeted role/local-template run settled changed=0; syntax and diff checks passed. No heavy testing or destructive rebuild.
+- Updated current handoff/controller usage. Future unassisted zero-to-configured Eddie rebuild remains a separate acceptance exercise after defining deletion scope and preserving required state. The default dynamic inventory interpreter issue is not diagnosed beyond the missing-six warning; use the established controller environment before a full run.
+- Removed the temporary /tmp CLI-only invocation after applying maintained role tasks. Existing unrelated uncommitted changes preserved; no commit or publishing performed.
+
+### 2026-11-09 — Global VM shell environment
+
+- Owner clarified the Deepthot convention: SSH into a VM should expose that VM's tools globally, without per-user setup. Recorded this as an operating contract.
+- Inspected Eddie /etc/profile and /etc/bash.bashrc. Added maintained /etc/profile.d/deepthot-tools.sh to ensure /usr/local/bin is on PATH and an idempotent global Bash block to source it in interactive non-login shells. Login shells already source profile.d through /etc/profile.
+- Retired the service-account-specific command link; kept its native rollback backup. The command itself remains root-owned /usr/local/bin/hermes, using the accepted Docker launcher and local profile. Docker authorization policy was not broadened.
+- Applied only owning role CLI tasks. Fresh SSH checks as hermes and denebeim, with HOME=/nonexistent and starting PATH=/usr/bin:/bin, found /usr/local/bin/hermes in both login and interactive non-login Bash. Expected no-job-control warnings came from invoking interactive Bash without a PTY. No inference request repeated.
+- Narrow repeat: ok=6, changed=0, failed=0, skipped=2. Controller/handoff updated; temporary /tmp invocation removed. Existing historical symlink entries above describe earlier implementation, superseded by this global design.
+
+### 2026-11-09 — Package Hermes follow-up for issue #4
+
+- Owner requested a documented hermes.yaml with GPL licensing, work on the ticket branch, and publication to GitHub. Reported input-not-a-terminal fd=0 and unexpected interactive command behavior are recorded as follow-up, not fixed in this packaging step.
+- GitHub issue #4 is the completed original Docker migration; no open PR existed. Continued its existing codex/4-eddie-hermes-docker branch. Preserved all pending work in a stash before switching, merged current origin/main without rewriting history, resolved old squash-merge documentation conflicts using main, then restored pending work. Stash backup retained.
+- Added shared hermes.yaml with a top-of-file explanation of lifecycle, prerequisites, persistent state, service identity, global CLI, usage and verification control, plus GPL-3.0-only SPDX notice matching repository GPLv3 license. vm.yaml imports it after host application prerequisites; owning roles remain the implementation source.
+- GPL notices also cover newly authored launcher, global PATH fragment and CLI tasks. No claim to relicense upstream Hermes or imported third-party roles.
+- Includes pending IPA-group-to-local-Docker membership convergence because fresh-login denebeim access must be reproducible, not a manual host exception. The separate pre-existing IPA enabled-flag validation edit remains outside this Hermes change.
+- No new live deployment or heavy tests for this entrypoint extraction. Preserve existing operational acceptance evidence and pending clean-rebuild/terminal limitations.

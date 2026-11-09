@@ -286,3 +286,6 @@ __marimo__/
 
 !/HANDOFF.md
 !/HERMES-DESKTOP.md
+
+# Reviewed shared Hermes application entrypoint.
+!/hermes.yaml

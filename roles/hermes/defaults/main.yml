@@ -11,3 +11,4 @@ hermes_container_name: hermes
 hermes_data_dir: /opt/hermes/data
 hermes_gpu_devices: []
 hermes_verify_inference: true
+hermes_cli_profile: local

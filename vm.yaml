@@ -11,5 +11,4 @@
       when: "'tag_gpu' in group_names"
     - role: machines/ollama
       when: "'tag_ollama' in group_names"
-    - role: hermes
-      when: "'tag_hermes' in group_names"
+- ansible.builtin.import_playbook: hermes.yaml
