@@ -13,3 +13,9 @@ Review: inspect scoped diff, parse playbook JSON, compile embedded configuration
 Publication remains pending owner review. No push, issue, PR or merge authorized. Condense branch notes and final documentation to purpose, behavior and usage before merging.
 
 Results: both Ansible syntax checks passed; embedded configuration Python and substituted Gemini helper compile; staged diff whitespace check passed. Original ai-twiddles snapshot was ignored/untracked by the repository top-level allowlist, so this commit explicitly adds its eight files without changing the unrelated dirty .gitignore. No live configuration or functional tests.
+
+## Readability and caveats follow-up
+
+README now distinguishes the owner-reported Ubuntu 26.04 LTS live setup from syntax-only playbook validation, and records desktop-user context, prerequisites and existing app/extension assumptions. Converted JSON-form playbooks to conventional YAML with literal blocks for embedded Python; parsed values were compared before and after. Extension metadata is indented JSON with unchanged values. Gemini runtime state JSON is now indented; preset/config writers already use indent=4. No live execution.
+
+Validation: both Ansible syntax checks, embedded Python/helper compilation and scoped diff whitespace checks passed. YAML conversion and metadata formatting preserved parsed values. No deployment or functional testing.

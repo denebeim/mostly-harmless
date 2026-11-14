@@ -59,7 +59,7 @@ def read_state(path):
 
 def save_state(path, state):
     tmp = path.with_suffix('.new')
-    tmp.write_text(json.dumps(state))
+    tmp.write_text(json.dumps(state, indent=2) + "\n")
     tmp.chmod(0o600)
     tmp.replace(path)
 
