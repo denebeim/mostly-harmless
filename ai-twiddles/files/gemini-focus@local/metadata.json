@@ -1,0 +1,1 @@
+{"uuid": "gemini-focus@local", "name": "Gemini window focus", "description": "Focus Gemini on Wayland for the local dictation shortcut. Exposes only Gemini window focus and status.", "shell-version": ["50"], "version": 1}

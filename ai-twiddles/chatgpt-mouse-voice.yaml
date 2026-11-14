@@ -1,0 +1,46 @@
+# Personal desktop experiment; JSON syntax is valid YAML. See README.md.
+[
+  {
+    "name": "chatgpt personal mouse voice button",
+    "hosts": "localhost",
+    "connection": "local",
+    "gather_facts": true,
+    "tasks": [
+      {
+        "name": "Create launcher directory",
+        "ansible.builtin.file": {
+          "path": "{{ target_home }}/.local/bin",
+          "state": "directory",
+          "mode": "0755"
+        }
+      },
+      {
+        "name": "Install captured launcher",
+        "ansible.builtin.copy": {
+          "src": "files/chatgpt-voice-toggle",
+          "dest": "{{ target_home }}/.local/bin/chatgpt-voice-toggle",
+          "mode": "0755"
+        }
+      },
+      {
+        "name": "Save button mapping and GNOME shortcut",
+        "ansible.builtin.command": {
+          "argv": [
+            "/usr/bin/python3",
+            "-c",
+            "import ast,json,subprocess,sys,shlex\nfrom pathlib import Path\nhome=Path(sys.argv[1])\npreset=sys.argv[2]\nbase=home/'.config/input-remapper-2'\np=base/'presets/Logitech M705'/f'{preset}.json'\np.parent.mkdir(parents=True,exist_ok=True)\nitems=json.loads(p.read_text()) if p.exists() else []\nitems=[m for m in items if not any(e.get('type')==1 and e.get('code')==276 for e in m.get('input_combination',[]))]\nitems.append({'input_combination':[{'type':1,'code':276,'origin_hash':''}],'target_uinput':'keyboard','output_symbol':'Control_L + Alt_L + Shift_L + v','mapping_type':'key_macro'})\np.write_text(json.dumps(items,indent=4)+'\\n')\np=base/'config.json'\nconfig=json.loads(p.read_text()) if p.exists() else {}\nconfig.setdefault('autoload',{})['Logitech M705']=preset\np.write_text(json.dumps(config,indent=4)+'\\n')\nschema='org.gnome.settings-daemon.plugins.media-keys'\npath='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/'\npaths=ast.literal_eval(subprocess.check_output(['gsettings','get',schema,'custom-keybindings'],text=True).removeprefix('@as '))\nif path not in paths: paths.append(path)\nsubprocess.run(['gsettings','set',schema,'custom-keybindings',repr(paths)],check=True)\nfor field,value in [('name','chatgpt Voice Toggle'),('command',shlex.join(['/usr/bin/python3',sys.argv[3],str(home/'.local/bin/chatgpt-voice-toggle')])),('binding','<Control><Alt><Shift>v')]:\n subprocess.run(['gsettings','set',schema+'.custom-keybinding:'+path,field,repr(value)],check=True)\n",
+            "{{ target_home }}",
+            "{{ mouse_preset }}",
+            "{{ playbook_dir | dirname }}/scripts/log-session.py"
+          ]
+        },
+        "changed_when": true
+      }
+    ],
+    "become": false,
+    "vars": {
+      "target_home": "{{ ansible_facts.user_dir }}",
+      "mouse_preset": "{{ target_home | replace('/', '_') }}"
+    }
+  }
+]
