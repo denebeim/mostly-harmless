@@ -230,7 +230,7 @@ session-maintained record, not an autonomous live feed.
 
 ### 2026-11-07 — Hermes static networking interim decision
 
-- Owner directs static networking for Hermes for now: IP 192.168.42.132/24, gateway 192.168.42.1, DNS 192.168.42.2, search domain local.deepthot.org. No networking change applied in this step.
+- Owner directs static networking for Hermes for now: host eddie.local.deepthot.org, gateway LAN gateway, DNS Pi-hole DNS host, search domain local.deepthot.org. No networking change applied in this step.
 - Long-term design remains service-managed networking: when Eddie is created, automation should update its MAC in the Pi-hole TOML DHCP reservation, with DHCP supplying guest networking.
 - Private Pi-hole snapshot is ~/projects/pihole.toml; never commit it. Future deployment should use a .j2 template with protected secrets. Snapshot shows DHCP enabled and a Hermes DNS record, but no matching reservation in dhcp.hosts. External dnsmasq files are enabled and have not been inspected.
 - Next step: implement explicit static cloud-init settings and a reproducible correction for the existing Hermes guest, preserving other network configuration.
@@ -267,7 +267,7 @@ session-maintained record, not an autonomous live feed.
 - NVIDIA DKMS build succeeded on 6.8.0-149-generic; nvidia-smi reports Quadro K5200, 8126 MiB, 470.256.02. No reboot required.
 - Ollama 0.40.15 installed and API responds. Installer environment now pins 0.40.15 for future installs. Pulled reference qwen3.5:4b (Q4_K_M, 4.2B).
 - CUDA documentation excludes this legacy card/driver, but actual Ollama auto-detected Vulkan and offloaded 33/33 model layers. ollama ps reports 100% GPU. Direct inference returned 'Eddie is online.' (6 output tokens in approximately 0.52s, excluding prompt processing and cold load); this is a smoke test, not a representative benchmark.
-- Configured Hermes provider custom, model qwen3.5:4b, endpoint http://127.0.0.1:11434/v1 using its existing config template. Mirrored model/gateway settings in eddie.yaml so subsequent role runs preserve them.
+- Configured Hermes provider custom, model qwen3.5:4b, endpoint http://localhost:11434/v1 using its existing config template. Mirrored model/gateway settings in eddie.yaml so subsequent role runs preserve them.
 - Initial Hermes prompt failed service_identity_unverified. Installed Hermes v0.23.0 requires a gateway runtime even for CLI requests; inherited disabled unit used EnvironmentFile and --no-supervise, conflicting with runtime identity checks. Updated template to explicit HOME/HERMES_HOME and --external-supervisor; .env remains loaded by Hermes itself. Enabled gateway through reproducible local_model role tasks.
 - End-to-end Hermes CLI test as service user hermes returned 'Hermes is online.' with exit 0. Gateway active; Ollama reports 100% GPU. No cloud inference credentials were needed or supplied. This verifies a simple reply; tool execution and long-context agent workloads remain untested.
 - Driver/Ollama installation play: failed=0; model deployment and gateway correction: failed=0. Full eddie.yaml end-to-end provisioning still outstanding (including IPA wrapper restoration). Logs appended to eddie-session.log.
@@ -284,9 +284,9 @@ session-maintained record, not an autonomous live feed.
 - Owner explicitly requested destroying Hermes, releasing resources, recreating VM 314 as Eddie without upgrades, then creating Pi-hole records through the visible browser.
 - Ran destroy_hermes.yaml successfully (failed=0); verified no VM 314 remained and pvesm list heartogold --vmid 314 returned no allocated volumes. Preserved the old configuration privately under .ansible/rebuild-records.
 - Added create_eddie.yaml, a base-VM-only playbook using the existing template/create_vm role. Explicit ciupgrade false is applied before first boot through a new optional create_vm task. No guest application roles or package upgrades ran. Static IP remains the authorized interim design.
-- VM 314 named eddie is running, 8 cores/16 GiB/40G, serial console and K5200 passthrough configured. Guest SSH confirms eth0 MAC BC:24:11:47:69:B9 and IP 192.168.42.132/24. Cloud-init completed, errors empty; only deprecated user-field warnings.
+- VM 314 named eddie is running, 8 cores/16 GiB/40G, serial console and K5200 passthrough configured. Guest SSH confirms eth0 MAC BC:24:11:47:69:B9 and host eddie.local.deepthot.org. Cloud-init completed, errors empty; only deprecated user-field warnings.
 - Source template lacks qemu-guest-agent. Interrupted the optional agent-only retry loop (controller exit 99) after successful creation, serial login prompt and SSH verification. Updated base playbook to wait for SSH without requiring agent installation. Verified SSH through an isolated first-use known-hosts file under .ansible; existing workstation entries were not changed.
-- Authenticated Pi-hole session was available in visible browser; created local A records eddie and eddie.local.deepthot.org -> 192.168.42.132. UI confirmed both entries; direct DNS queries to 192.168.42.2 returned that address for each. Screenshot saved /tmp/eddie-dns-records.png. Existing Hermes DNS record retained; no DHCP reservation created in this static-network smoke test.
+- Authenticated Pi-hole session was available in visible browser; created local A records eddie and eddie.local.deepthot.org -> eddie.local.deepthot.org. UI confirmed both entries; direct DNS queries to Pi-hole DNS host returned that address for each. Screenshot saved /tmp/eddie-dns-records.png. Existing Hermes DNS record retained; no DHCP reservation created in this static-network smoke test.
 - Pi-hole record changes are recorded here; deployment templating/secret separation remains future work. Private Pi-hole TOML not copied or committed.
 - Stopped at base VM + DNS milestone; IPA enrollment, user NFS-home login, Docker, Hermes and Ollama are deliberately not provisioned on fresh Eddie yet.
 
@@ -294,7 +294,7 @@ session-maintained record, not an autonomous live feed.
 
 - [ ] Discuss Pi-hole versus IPA DNS versus traditional BIND9 and separate DHCP services on `services`. Owner prefers familiar, explicit zone/service configuration and is considering returning to BIND9 plus isc-dhcpd; evaluate the DHCP implementation when planning migration. This is a discussion item, not authorization to migrate now.
 - Current decision: Pi-hole owns LAN DNS; do not use IPA as the LAN DNS authority. IPA remains intended for identity and automount. Actual IPA DNS/forwarding configuration has not been audited.
-- Desired DNS model: zone local.deepthot.org with an SOA and one relative host A record per machine (e.g. eddie A 192.168.42.132). Verify Pi-hole SOA/domain behavior; do not equate its local host list with a BIND authoritative zone.
+- Desired DNS model: zone local.deepthot.org with an SOA and one relative host A record per machine (e.g. eddie A eddie.local.deepthot.org). Verify Pi-hole SOA/domain behavior; do not equate its local host list with a BIND authoritative zone.
 - [ ] Consolidate Eddie's duplicate short-name/FQDN Pi-hole entries after verifying local-domain expansion. Both entries currently remain; no DNS changes made for this documentation update.
 - Long-term network source of truth: DHCP reservations map VM MACs to stable IPs and supply DNS/domain settings; creation automation updates the reservation MAC. Static guest settings are an interim decision. Future configuration uses templates with separately protected secrets; never commit the private Pi-hole TOML.
 
@@ -361,7 +361,7 @@ session-maintained record, not an autonomous live feed.
 - PR #1 was squash-merged into main as 5eb1a4d. Created codex/3-optimize-base-vms from main. Existing LAN-Ollama work in CONTROLLER.md, eddie.yaml and setup_hermes_vm.yaml was privately backed up in .ansible/change-backups/pre-optimization-20261108.patch and preserved while extracting it into shared roles.
 - Eddie preflight: K5200/470.256.02 visible; Ollama 0.40.15 reports qwen3.5:4b at 100% GPU with context 65536; host Hermes and Ollama services active. Docker and Hermes privileged inspection will use sudo; initial unprivileged checks lacked permission. No migration yet.
 - Added shared create_vm/join_deepthot/install_docker/vm entrypoints and base/GPU/Ollama roles. Proxmox helper compares live settings, preserves NIC MAC, resizes upward only and reports actual tags. Base bootstrap uses private per-MAC first-use SSH pinning, installs guest agent, then verifies trust through the hypervisor into the same file. Cloud-init upgrades disabled; declared guest upgrades are an explicit base-role option.
-- Test target: deepthot-base-test, VM 8314, 192.168.42.250/24, 2 cores, 2 GiB, 12G, no tags; ID/name absent and IP had no ping/neighbor response. Storage heartogold has capacity; other storage/services were only observed and not modified. Tests must never use Eddie's ID or GPU.
+- Test target: deepthot-base-test, VM 8314, deepthot-base-test, 2 cores, 2 GiB, 12G, no tags; ID/name absent and IP had no ping/neighbor response. Storage heartogold has capacity; other storage/services were only observed and not modified. Tests must never use Eddie's ID or GPU.
 - A file-generation command initially used system Python without PyYAML; it was rerun successfully with the project virtualenv. No managed host was affected.
 
 - Owner steering: preserve the pending LAN Ollama listener changes. Test VMs must not run package upgrades. Eddie declares local user/group hermes and exact Docker membership [hermes]; that service account is not enrolled in Kerberos. Optional local-user and exact Docker-membership declarations now live in the shared roles.
@@ -377,9 +377,375 @@ session-maintained record, not an autonomous live feed.
 - PR #6 squash-merged at d0849ca; #3 closed automatically, GitGuardian clean. On Eddie the native state copy completed. First container gateway command rejected starting a named profile gateway: installed 0.23.0 multiplexes profiles through the default gateway. Adjusted the role to start the shared gateway while preserving the default model settings. Future migration copies run as the local service user.
 
 - Eddie cutover succeeded: shared container gateway serves shipped default and local Qwen profiles, exact local smoke response passed, and a configuration-only repeat was ok=15/changed=0/failed=0. Ollama stayed at 100% GPU with 65536 context while the test ran; controller LAN model list passed. Smoke completion took several minutes, so no performance improvement is claimed. Container process runs as local hermes UID/GID 1001, sees GPU nodes and has no Docker socket. Hermes callback listener is loopback-only; Ollama remains LAN-accessible by design. Host native gateway and timer disabled; original data/install kept for rollback.
-- Confirmed SSH as denebeim to Eddie enters /nethome/denebeim. SSSD domain online; both names resolve to 192.168.42.132. Docker group is the local group with only hermes, per prior instruction; no IPA fault accounts for a denebeim Docker socket denial.
+- Confirmed SSH as denebeim to Eddie enters /nethome/denebeim. SSSD domain online; both names resolve to eddie.local.deepthot.org. Docker group is the local group with only hermes, per prior instruction; no IPA fault accounts for a denebeim Docker socket denial.
 - Recorded issue #5 investigation and recommended laptop-local file tools with Eddie inference in HERMES-DESKTOP.md. Added HANDOFF.md for current operational state and rollback. No automatic cloud fallback or remote Desktop UI acceptance run.
 
 - PR #7 squash-merged at fdec47d and closes #4/#5. Removed ignored scratch test playbooks/inventory; kept private rollback data and log.
 - Owner requested centrally managed Docker administration and login-once authorization as the broader design. Created IPA POSIX group docker-admins with denebeim, and sudo rule docker-admin-access for /usr/bin/docker, order 100, !authenticate, explicitly scoped to verified enrolled hosts. Hostgroup-only matching did not surface in SSSD; direct Eddie membership did. Removed temporary hostgroup and kept local Eddie docker group unchanged. Passwordless sudo Docker verified from fresh SSH on Eddie.
 - Scoped rule to Mailcow and Mastodon after guest agent confirmed Docker and enrolled host identities. Their SSSD refreshes failed because root filesystems were already full. Regenerable APT cache cleanup restored both SSSD services without touching logs or Docker data. Mailcow still had IPA DNS resolution failures; Mastodon reached LDAP but needs verified sudo. Mailu lacks a matching directory host record, DMZ is not enrolled, and stopped guests were excluded. Opened #8 for these remaining hosts and durable capacity fixes. Added idempotent host registration to the IPA+Docker role path; live repeat against Eddie returned already registered.
+
+- Addressed Sourcery’s IPA enabled-flag finding from PR #9. Docker host registration now requires an explicit enabled value and rejects disabled or missing flags before any directory write.
+
+- Added denebeim to Eddie’s local docker group for direct socket access and declared both hermes and denebeim in eddie.yaml. The socket is root:docker with mode 0660. Plain docker ps listed Hermes from a fresh SSH login as denebeim. Eddie playbook syntax and git diff checks passed.
+
+- Superseded the per-user Eddie Docker declaration. The Docker role reconciles local service accounts with the IPA docker-admins members resolved through SSSD. Verified the membership tasks on Eddie with zero changes.
+
+## 2026-11-09 — Recover November 8 Docker/CLI context
+
+- Read repository operating contract, historical worklog, handoff, current branches and diffs, Eddie declaration and Hermes container/migration/verification roles. Recovered additional November 8 evidence from the ignored private session log. Prior chat transcripts are unavailable through current tools; no claim of having reviewed them.
+- Current local branch is main at 6aafdb0, with six pre-existing modified files covering documentation, Eddie Docker group policy and IPA registration validation. Preserved all pending changes; remote refs have not been refreshed. The removed setup_hermes_vm.yaml is historical; shared roles/hermes owns current deployment.
+- Verified from retained log: Docker CLI v0.23.0; single observed bind mount /opt/hermes/data → /opt/data; UID 1001 CLI HOME=/opt/data and HERMES_HOME=/opt/data. Profile listing showed default Claude/auto and local Qwen/custom. Direct Ollama native and OpenAI-compatible requests returned OK later that evening; local gateway reported the default-profile multiplexer. Native host launcher still targeted the original installation when inspected. Earlier successful cutover inference remains historical acceptance, not proof of current interactive operation.
+- Owner-reported November 8 checkpoint (not independently rechecked here): root container/s6 supervision with actual gateway/model UID/GID 1001, Privileged=false, no explicit Docker user namespace mode, working absolute CLI version command, and interactive TUI provider prompt.
+- Hypotheses: unqualified CLI selects an unconfigured default provider; CLI/gateway profile or environment differs; required provider credentials are unavailable. Configuration invisibility and its cause remain unverified. Existing logged HOME/HERMES_HOME and profile discovery argue against assuming the persistent mount is absent.
+- Updated CONTROLLER.md and HANDOFF.md to separate container root from application identity, qualify CLI acceptance, preserve rollback history and identify the configuration boundary as the next task. mostly-harmless remains authoritative; deepthot-configuration is legacy reference.
+- Next: one read-only comparison of selected paths/profile/model/provider and allowlisted CLI/gateway environment; then choose the smallest correction from evidence. Host launchers for hermes and denebeim remain deferred until this is understood. No infrastructure changes made during documentation recovery.
+
+### 2026-11-09 — First live CLI configuration-boundary diagnostic
+
+- Read-only comparison succeeded over SSH from benjymouse as hermes, running container Python as UID/GID 1001. HOME and HERMES_HOME both /opt/data, cwd /opt/hermes. Both config files were readable and owned by UID 1001; narrowly selected model/provider fields remain default Claude/auto and local Qwen/custom.
+- Previously logged gateway PID 195 currently has UID 1001, cwd /opt/data and the same HOME/HERMES_HOME. Other gateway-command-line matches include service/log helpers with HOME=/root but HERMES_HOME=/opt/data; they were not classified as gateway/model applications by this diagnostic.
+- No HERMES_PROFILE or HERMES_PROFILE_NAME in the allowlisted CLI environment. Effective profile selection and credential availability remain unverified. Shared HERMES_HOME and readable files weaken the missing-configuration hypothesis; profile selection remains the leading explanation to test.
+- Diagnostic setup failures: local SSH configuration ownership check required the documented -F /dev/null; sandbox networking required escalation; container system python3 lacks PyYAML, so the same read-only diagnostic was retried with standard-library inspection of only model-block default/provider lines. No dependencies installed or remote files changed. Successful output is in the private session log with BEGIN/END markers.
+- Next single diagnostic: read installed CLI profile-selection logic and active-profile metadata, then test explicit local TUI selection. No host launcher or infrastructure changes made.
+
+### 2026-11-09 — Owner priority clarification
+
+- Sole current goal: get as much intelligence working locally as possible. Local resources first; focus remains Eddie/Hermes local inference and CLI recovery. No unrelated work has begun.
+- Owner reports Mastodon and the mail subsystem are entirely down. This is reported state, not a fresh diagnostic; repairs remain outside the current scope. Earlier historical service observations must not be read as current availability.
+- Google account access and ChatGPT secretarial workflows are desired future work for a separate session; no connections or account changes initiated.
+- Continue one diagnostic at a time and log commands/output through scripts/log-session.py to eddie-session.log.
+
+### 2026-11-09 — Stale Desktop tunnel log noise
+
+- Identified leftover local SSH PID 2759191 forwarding localhost:19120 to Eddie port 19120 from the November 8 temporary Desktop experiment. Repeated channel-open connection refusals were burying current session entries; November 9 work was present in the log.
+- Sent SIGTERM only after checking the process was still ssh with the exact experimental forwarding argument. Main Hermes container/gateway and persistent configuration were not changed. Existing log history retained.
+
+### 2026-11-09 — Desktop experiment cleanup verified
+
+- Owner requested completion of last nights Desktop SSH experiment cleanup. Host-level inspection found no remaining SSH local forwards after the identified stale tunnel was stopped.
+- Read-only Eddie inspection found no hermes-desktop-test container, no TCP listeners on experimental ports 19119/19120/19121, and no matching host-visible Hermes/Python/timeout serve processes in the inspected executable-name set.
+- No additional cleanup targets found. Main Hermes services and persistent data retained; session log history preserved. All inspection output recorded through the session logger.
+
+### 2026-11-09 — Docker-backed host CLI implementation
+
+- Owner authorizes autonomous local-equipment work toward working host CLI and local inference, with maintained playbooks and lightweight verification only. A later zero-to-configured rebuild is the acceptance target, not authorization to delete Eddie now. No unrelated host/application work.
+- Read installed main.py profile pre-parser and profile helpers. No active_profile file existed; absent explicit -p, the CLI retained default, selecting shipped Claude/auto instead of local Qwen/custom. Files/environment were available: this was profile selection, not a missing persistent mount.
+- Added roles/hermes/tasks/cli.yml and templates/hermes.sh.j2, imported by the existing container role. Installs root-owned /usr/local/bin/hermes; passes arbitrary arguments to absolute container CLI using docker exec -i, adds -t only when stdin/stdout are terminals, uses discovered service UID:GID and explicit HOME/HERMES_HOME=/opt/data. Does not use sudo or mount the host socket into the agent.
+- Manages active_profile=local (hermes_cli_profile default); preserves old service-account command as ~/.local/bin/hermes.native and replaces its original path with a symlink. Explicit profile flags still work. Shared-gateway role lifecycle invocation now explicitly selects default to avoid dependence on sticky CLI profile.
+- Applied owning role CLI tasks through a temporary /tmp invocation only; no retained repair playbook, full VM run, package upgrades or gateway restart. A repeat exposed symlink target ownership drift; setting follow=false fixed it. Final targeted convergence: ok=7, changed=0, failed=0, skipped=1.
+- Fresh SSH as both hermes and denebeim resolved /usr/local/bin/hermes, reported v0.23.0/install method docker, and listed local Qwen as active. Actual ssh -tt host hermes launch as denebeim reached local/Qwen interactive prompt without provider setup and exited cleanly.
+- Interactive telemetry choice was misread: confirmation reported sharing enabled despite intended opt-out. Immediately called the installed save_consent(False, False) API for local; it reported enabled=false, send=false, decided=true, reask=false. No assertion about whether any metrics were transmitted during that short interval. Added the explicit opt-out and offer_version=2 to the maintained local template and converged it without restarting gateway.
+- Syntax check passed with explicit static inventory; default inventory invocation initially warned that its system interpreter lacked six. No dependencies changed. Dynamic inventory/controller environment and full rebuild remain untested this session.
+- One host-command local inference request is pending (300-second bound). Ollama status shows qwen3.5:4b resident at 100% GPU, 65536 context; local gateway status reports the shared default multiplexer. No additional inference requests launched.
+
+### 2026-11-09 — Host CLI/local agent accepted
+
+- The single bounded local request, issued through plain host hermes as denebeim, returned exactly 'Eddie is online.' and agent_exit=0. Active profile was local/Qwen/Ollama. Response took several minutes; no speed claim.
+- Combined acceptance: both users resolve the Docker-backed command and active local profile; interactive denebeim launch reaches local/Qwen chat without provider setup; one local inference succeeds. Targeted role/local-template run settled changed=0; syntax and diff checks passed. No heavy testing or destructive rebuild.
+- Updated current handoff/controller usage. Future unassisted zero-to-configured Eddie rebuild remains a separate acceptance exercise after defining deletion scope and preserving required state. The default dynamic inventory interpreter issue is not diagnosed beyond the missing-six warning; use the established controller environment before a full run.
+- Removed the temporary /tmp CLI-only invocation after applying maintained role tasks. Existing unrelated uncommitted changes preserved; no commit or publishing performed.
+
+### 2026-11-09 — Global VM shell environment
+
+- Owner clarified the Deepthot convention: SSH into a VM should expose that VM's tools globally, without per-user setup. Recorded this as an operating contract.
+- Inspected Eddie /etc/profile and /etc/bash.bashrc. Added maintained /etc/profile.d/deepthot-tools.sh to ensure /usr/local/bin is on PATH and an idempotent global Bash block to source it in interactive non-login shells. Login shells already source profile.d through /etc/profile.
+- Retired the service-account-specific command link; kept its native rollback backup. The command itself remains root-owned /usr/local/bin/hermes, using the accepted Docker launcher and local profile. Docker authorization policy was not broadened.
+- Applied only owning role CLI tasks. Fresh SSH checks as hermes and denebeim, with HOME=/nonexistent and starting PATH=/usr/bin:/bin, found /usr/local/bin/hermes in both login and interactive non-login Bash. Expected no-job-control warnings came from invoking interactive Bash without a PTY. No inference request repeated.
+- Narrow repeat: ok=6, changed=0, failed=0, skipped=2. Controller/handoff updated; temporary /tmp invocation removed. Existing historical symlink entries above describe earlier implementation, superseded by this global design.
+
+### 2026-11-09 — Package Hermes follow-up for issue #4
+
+- Owner requested a documented hermes.yaml with GPL licensing, work on the ticket branch, and publication to GitHub. Reported input-not-a-terminal fd=0 and unexpected interactive command behavior are recorded as follow-up, not fixed in this packaging step.
+- GitHub issue #4 is the completed original Docker migration; no open PR existed. Continued its existing codex/4-eddie-hermes-docker branch. Preserved all pending work in a stash before switching, merged current origin/main without rewriting history, resolved old squash-merge documentation conflicts using main, then restored pending work. Stash backup retained.
+- Added shared hermes.yaml with a top-of-file explanation of lifecycle, prerequisites, persistent state, service identity, global CLI, usage and verification control, plus GPL-3.0-only SPDX notice matching repository GPLv3 license. vm.yaml imports it after host application prerequisites; owning roles remain the implementation source.
+- GPL notices also cover newly authored launcher, global PATH fragment and CLI tasks. No claim to relicense upstream Hermes or imported third-party roles.
+- Includes pending IPA-group-to-local-Docker membership convergence because fresh-login denebeim access must be reproducible, not a manual host exception. The separate pre-existing IPA enabled-flag validation edit remains outside this Hermes change.
+- No new live deployment or heavy tests for this entrypoint extraction. Preserve existing operational acceptance evidence and pending clean-rebuild/terminal limitations.
+
+### 2026-11-09 — Published Hermes follow-up
+
+- Committed implementation and documentation as 943d7d3 on codex/4-eddie-hermes-docker and pushed without rewriting branch history.
+- Opened PR #10: https://github.com/denebeim/mostly-harmless/pull/10 against main, following up issue #4. PR describes actual acceptance evidence, terminal warning, response latency and untested rebuild.
+- eddie.yaml and hermes.yaml syntax checks and staged diff checks passed. No private logs, credentials or ignored operational files included. Separate pre-existing IPA enabled-flag edit remains uncommitted; preserved stash backup retained.
+
+
+## 2026-11-10 — WireGuard DMZ server and staged Benjymouse client
+
+- Owner requested autonomous WireGuard setup, DMZ server on Deepthot and Benjymouse client, full output in chat.log and remarkable events here. Confirmed Benjymouse identity and VM 216 dmz on heartogold, host dmz. Commands are echoed before execution following owner's later instruction. Early read-only inspection preceded log creation; summarized retrospectively. Private keys never deliberately printed.
+- Initially honored misspelled mostly-harmles log path; owner corrected to mostly-harmless and requested a regular file. chat.log is now a regular private file in this repository, earlier contents retained; link and empty typo directory removed.
+- Found wg-easy container stopped for 16 months, historical Docker volume with legacy WireGuard subnet configuration. Preserved container and volume, did not restart it. Do not start the old container alongside this server: both use UDP 51820.
+- Existing interrupted kernel package installation blocked APT. Simulation showed one missing linux-image-5.15.0-170-generic and seven pending configurations; completed apt-get --fix-broken install, then installed wireguard-tools without other package upgrades or removals. No reboot; running kernel remains 5.15.0-168-generic. Final dpkg --audit empty.
+- Native server /etc/wireguard/wgdeepthot.conf and wgdeepthot.key are root-private. wg-quick@wgdeepthot active and enabled, UDP 51820, WireGuard server tunnel address, sole configured peer Benjymouse Benjymouse tunnel address. Server private key generated and retained remotely. IPv4 forwarding already enabled and now declared in /etc/sysctl.d/80-wireguard-deepthot.conf. Interface hooks add/remove peer-scoped LAN forwarding and NAT for WireGuard subnet through eth0. UFW inactive. Existing Docker/application services retained.
+- Client key/config staged mode 0600 under mode-0700 /var/tmp/wireguard-1847800003 on Benjymouse. Endpoint deepthot.org:51820 currently resolves through LAN DNS to dmz. Intended split tunnel covers WireGuard subnet plus LAN LAN subnet at metric 800, allowing existing local LAN routes to win at home. No default internet route or DNS changes; 25-second keepalive.
+- Client startup BLOCKED by AppArmor: /etc/apparmor.d/wg-quick allows configuration only under /etc/wireguard. Initial home/project-storage/root-squash hypothesis was incorrect, as identical denial occurred on local ext4 /var/tmp. Profile was inspected and restriction identified. Existing NOPASSWD sudo permits wg-quick only; sudo -n install to /etc/wireguard fails with interactive authentication required. Did not weaken AppArmor or use wg-quick hooks to bypass authorization.
+- Staged user unit ~/.config/systemd/user/wireguard-deepthot.service was disabled/stopped after failed attempts; no remaining retry loop. Existing Linger=yes observed. Maintained scripts/setup-wireguard.py now installs the staged config to /etc/wireguard with sudo before writing/enabling the user unit, and prints subprocess commands before execution. Script is partial setup, not accepted end-to-end; requires authorized sudo install and must be rerun after administrative access is available. It does not install OS packages. /var/tmp staging is private but may be aged by system cleanup; retain until installation is completed. Removed redundant private staging under project .ansible/wireguard.
+- Verification: server active/enabled; wg show lists intended peer with no handshake. Client interface absent, client service disabled, internet route unchanged. No end-to-end traffic, LAN forwarding, remote public DNS/NAT forwarding, restart, or reboot acceptance claimed. Router UDP 51820 forwarding and away-from-home reachability remain unverified. No Git commit or publication; unrelated existing Docker IPA file modification preserved.
+- Remaining: an administrator must authorize copying the client configuration to /etc/wireguard; rerun scripts/setup-wireguard.py, verify handshake and ping WireGuard server tunnel address plus LAN traffic, then verify startup and external UDP forwarding. Server rollback: sudo systemctl disable --now wg-quick@wgdeepthot removes interface and its firewall rules; retained config/key and dedicated sysctl file may then be removed after review. Do not disable global forwarding, which predated this work and is used by Docker.
+
+### 2026-11-10 — GNOME authorization completed; tunnel accepted on LAN
+
+- Owner asked whether this session could request a password through GNOME. Confirmed pkexec and graphical session; pkexec --disable-internal-agent /usr/bin/install -m 600 -o root -g root installed the staged client config to /etc/wireguard/wgdeepthot.conf after successful system authentication. No password entered into chat or captured by agent. Earlier authorization blocker is resolved.
+- Updated user unit to permitted /etc/wireguard config path, enabled and started it. Existing user lingering enables startup without a desktop login. Server remains enabled. Verified fresh WireGuard handshake and encrypted traffic, ping server WireGuard server tunnel address 3/3 and LAN DNS host Pi-hole DNS host explicitly through wgdeepthot 3/3, no loss. Client service restart and subsequent tunnel ping 2/2 passed; client active and enabled. Ordinary internet route remains via LAN gateway on physical Ethernet.
+- End-to-end LAN tunnel and forwarding now accepted. Remote public DNS/router UDP forwarding and actual reboot remain untested. Existing script uses sudo -n install; if authorization is absent on a later run, use the same narrowly scoped pkexec installation as this session. Client management: systemctl --user start|stop|restart wireguard-deepthot.service.
+
+## 2026-11-11 — Shared live command logging
+
+Preserved the existing private eddie-session.log in place and strengthened
+scripts/log-session.py: append-only 0600 log, sanitized live merged stdout/stderr,
+inherited stdin, launch-failure records, signal exit codes, run IDs, and no argv
+metadata. Added root AGENTS.md with mandatory wrapper guidance for cooperating
+agents; added its ignore exception and linked the contract from CONTROLLER.md.
+No universal command hook exists in the current SDK initialization runners.
+Validated harmless stdout/stderr, live line delivery before exit, status 23,
+missing executable 127, SIGTERM 143, existing history preservation, permissions,
+and synthetic-secret redaction using a temporary isolated log. Current commands
+are already appending to the default shared log; emitted LIVE LOG CHECK on both
+stdout and stderr for the owner watching with tail. Child buffering/incomplete
+lines and tools that require output TTYs remain limitations; redaction is best
+effort and agents must avoid printing secrets.
+
+### Standing visibility preference
+
+Owner confirmed the live tail now receives output. Persisted the voice/chat/tail
+workflow in AGENTS.md: visible coordinator requests and executor responses in
+Codex chat/console, actual sanitized command output in the shared session log,
+and continuous wrapper use by delegated executors through diagnostics, edits,
+validation, and failures. Documented adoption and connector/API capture limits;
+no claim of machine-wide interception. This update was itself executed through
+the shared logger.
+
+### November 11 — LibreChat voice input diagnostics on Ubuntu desktop
+
+Owner-requested diagnostics used the shared session logger after the initial instruction read. LibreChat browser speech code emits the reported unsupported-recognition error when the browser recognition API/controller is unavailable. Firefox 153.0.3 is running; Google Chrome 157.0.8103.38 is installed. A temporary headless Chrome profile confirmed a recognition constructor is exposed; this did not test the microphone or actual recognition. The installed LibreChat STT service supports OpenAI-compatible and Azure OpenAI providers, not native Gemini STT. Approved directory environment supplies Gemini only; other checked STT credentials are absent/placeholders. No librechat.yaml, running transcription container, or checked local Whisper/Vosk tooling was found. No LibreChat configuration, browser preferences, or services changed. Recommended next test: open localhost:3080 in installed Google Chrome, sign in, leave speech-to-text engine Browser, allow microphone, and test dictation. Full voice acceptance remains pending a user microphone test; Firefox server-backed dictation would require a separately chosen transcription service.
+
+### November 11 — LibreChat reported early failures and running out
+
+Read-only inspection through the shared logger: all six LibreChat services remain running; application restart count 0 since 12:17 Arizona. Saved conversation settings select google/gemini-3.5-flash. Persisted provider failure at 13:20:10 Arizona is HTTP 429: free-tier generate-content requests-per-day quota exhausted, reported limit 20, provider quota dimension gemini-3.6-flash despite the selected 3.5 model. Provider retryDelay 41990 seconds corresponds to November 12 at 01:00 Arizona; official Gemini documentation states daily quota resets at midnight Pacific and is project-scoped. Earlier persisted failures at 13:14:57 and 13:15:02 report GoogleGenerativeAI failed to parse stream. These precede the recorded quota rejection; their underlying cause is not established. Latest successful response metadata shows roughly 7790 pre-prune context tokens and over 884000 remaining, with default output allowance 65535; no evidence these failures are caused by conversation/output exhaustion. Recent turn metadata reports toolCount 0, so this chat has no attached action tools. No prompt/response text printed, no generation probe made against the exhausted quota, no configuration/model/billing changes or restarts performed. Further reliable-use choice (paid quota, another provider/model, or local inference) requires owner preference; qualitative answer dissatisfaction requires one concrete example if it persists after transport/quota recovery.
+
+### November 11 — Intended paid Gemini account versus free-tier rejection
+
+Owner reports existing Google API billing with an approximately $20 limit. Read-only comparison in memory confirms the current LibreChat GOOGLE_KEY exactly equals GEMINI_API_KEY loaded from approved /home/denebeim/projects/.envrc; no secret values printed. The mounted .env has the user_provided placeholder, but Docker process environment supplies the actual server key and takes precedence. Safe running-key SHA-256 prefix recorded in private session log for future equality checks. The stored 429 error explicitly reports quotaMetric generate_content_free_tier_requests and quotaId GenerateRequestsPerDayPerProjectPerModel-FreeTier, limit 20; it provides no consumer/project/billing-account identifier. Selected model remains gemini-3.5-flash while provider quota dimension reports gemini-3.6-flash. gcloud/bq unavailable and ~/.config/gcloud absent, so no authenticated local billing/project lookup was possible. No alternate intended paid credential identified in inspected configuration; no credential switch, billing/budget mutation, or API generation performed. Next read-only account checks: AI Studio API Keys identify the project owning the existing directory key; Projects inspect that exact project Billing Tier/Status; Billing inspect linked account and any Prepay/No credits status; inspect whether the $20 setting is an alerts-only budget, a project spend cap, or prepaid balance. Current official documentation distinguishes alerts-only budgets (no automatic cap) from Gemini/project spend caps (enforced with latency/possible overages). Do not infer the owner means a consumer subscription; API project billing must be verified independently.
+
+### November 11 — Retry after payment-method update
+
+Owner updated Visa and reported no balance due, then authorized one minimal retry. At 14:03 Arizona, used the existing running LibreChat server credential with the same gemini-3.5-flash model, maxOutputTokens 32, thinking MINIMAL. LibreChat config endpoint HTTP 200. Exactly one provider generation request was made; it returned HTTP 402 RESOURCE_EXHAUSTED with explicit message that prepayment credits are depleted and directs to AI Studio billing. No provider retry/propagation delay supplied. This is a different explicit restriction from the previous Free Tier daily-quota rejection; do not infer fully active billing or available credit from no balance due. Next read-only check is available Prepay credit for the key-owning project/billing account in AI Studio. No billing, budget, credential, model, or service changes. Initial wrapper invocation lacked docker exec stdin attachment and executed no script/API request; corrected invocation used docker exec -i and both invocations are logged.
+
+### November 11 — Single retry after further owner billing/credit step
+
+At owner request, exactly one minimal generation at 14:34 Arizona using unchanged running LibreChat credential and gemini-3.5-flash, output allowance 32 and MINIMAL thinking. Google again returned HTTP 402 RESOURCE_EXHAUSTED: prepayment credits depleted. No text generated and no provider retry delay supplied. No additional generation requests, settings/billing/credential changes, or restarts performed.
+
+## 2026-11-12 — AI Setup
+
+- Objective: Set up Roo Code, Gemini, and establish the `mostly-harmless` baseline.
+- Status: Setup complete.
+- Verified findings: Verified Roo Code configured with Gemini (specifically `gemini-3.1-pro-preview`).
+- Changes made: Enforced `WORKLOG.md` tracking by creating `.clinerules`.
+- Unresolved questions, risks, and dependencies: None for this step.
+- Next action: Await further instructions.
+
+### 2026-11-12 — Hermes/Eddie synchronization from repository and logs
+
+- Read the full worklog and operating contract; inspected Git, diffs, entrypoints, owning roles and retained diagnostic evidence. No provisioning, infrastructure changes, branch switches, commits or pushes performed. Command output appended to both private chat.log and the shared eddie-session.log through the mandated logger.
+- Checkout: codex/4-eddie-hermes-docker at 7fda3c7; cached upstream agrees, nothing staged. Six pre-existing tracked modifications: .gitignore, CONTROLLER.md, WORKLOG.md, register_ipa_host.py, manage_vm.py and log-session.py; untracked AGENTS.md and scripts/setup-wireguard.py. Existing stash retained. Both operational logs are ignored. Remote freshness is unverified: default Git SSH failed the system SSH-config ownership check; retry with -F /dev/null failed DNS resolution for github.com.
+- Latest retained Hermes application acceptance remains November 9: Docker-backed host CLI/local profile, exact response Eddie is online. with agent_exit=0 (private session log lines 186997-187002), targeted convergence without changes. This is historical evidence, not a fresh live-health check.
+- Significant omitted failure: November 11 runs 9581440ff706 and ff22049b08aa failed in Proxmox convergence for VM 314 because boot order scsi0 referenced a nonexistent device (qm exit 255; Ansible exit 2). JSON parsing of helper output then obscured the underlying error. The uncommitted helper now selects the first present disk among scsi0/virtio0/sata0/ide0 for boot/resize and adds diagnostics; no successful subsequent deployment recap found in reviewed evidence. Actual disk identity and safety of this selection are not freshly verified.
+- HANDOFF.md remains a November 9 checkpoint and misses the later provisioning failure/helper edit. Earlier worklog current-findings headings are historical and superseded. Standalone hermes.yaml configures an existing tagged guest; eddie.yaml imports vm.yaml for the full lifecycle. Clean-VM full-stack acceptance remains outstanding, as does the reported fd=0 interactive warning.
+- Recommended next smallest step: read-only verification of VM 314 identity and disk/boot configuration, then review the pending helper correction against that evidence and verify it offline before any provisioning retry. Reconcile the observed 65536 Ollama context with maintained configuration as a separate reproducibility gap; no rebuild/deletion is authorized by this entry.
+
+### 2026-11-12 — Owner cost constraint
+
+- Owner sets a maximum monthly AI budget of $25; stop paid work at the cap until renewed authorization/funding. Treat this conservatively as total AI spending pending clarification of subscription versus additional usage. Prefer the cheapest suitable model, no unsolicited model escalation, paid API inference, credit purchases or parallel agents. Keep investigations narrow and handoffs concise.
+- Agent cannot enforce an account billing cap or infer dollar spending from token/usage percentages. Account billing controls and model selection must be verified separately; no billing settings or model changed in this step.
+
+### 2026-11-12 — Eddie boot configuration investigation
+
+- Read-only log review found a November 7 saved Proxmox `qm config 314` snapshot with `scsi0` 40G and `boot: order=scsi0`; the November 11 `qm set` returned invalid bootorder for that device. Snapshot is historical and conflicts with the later error, so current VM disk state remains unverified. The uncommitted helper picks the first existing disk key in a preference list and could select a non-root disk if the root disk is absent; do not treat the fallback as validated.
+- Attempted a read-only current `qm config 314` via Ansible. It did not run: `inventory/proxmox.py` failed to import `six` under the project venv; Ansible then exited 250 with Local RPC server did not start. No Proxmox command or infrastructure change occurred.
+- Next: restore the controller dependency through the tracked lock/requirements workflow, then retry the read-only query with the documented SSH config override. Do not retry provisioning until current VM config and root-disk selection are confirmed.
+
+### 2026-11-12 — Python formatting rule and ticket
+
+- Owner requests all Python files prettified and future scripts formatted. Extensive formatting must be isolated on its own GitHub ticket branch and in a dedicated formatting-only commit, separate from functional changes. Preserve this as a standing workflow rule.
+- Created issue #11, “Format Python scripts consistently and enforce formatting,” and branch `codex/11-python-formatting` from `main`. No formatting changes made in the active Eddie branch.
+
+### 2026-11-12 — Python formatting rule and ticket
+
+- Owner requests all Python files prettified and future scripts formatted. Extensive formatting must be isolated on its own GitHub ticket branch and in a dedicated formatting-only commit, separate from functional changes. Preserve this as a standing workflow rule.
+- Created issue #11, “Format Python scripts consistently and enforce formatting,” and branch `codex/11-python-formatting` from `main`. No formatting changes made in the active Eddie branch.
+
+### 2026-11-12 — Fixed Proxmox helper JSON output
+
+- Removed command debug prints from `roles/proxmox/create_vm/files/manage_vm.py`; successful stdout is now solely the JSON result consumed by Ansible. Existing command exceptions still fail the helper with a nonzero exit. Kept this functional fix separate from the Python-formatting issue/branch.
+- Re-ran `eddie.yaml` with `--limit heartogold` under direnv, so only Proxmox plays ran. VM convergence and JSON fact parsing passed (`ok`); guest and application plays had no matching hosts. Verified running guest identity via Proxmox agent and refreshed its private controller SSH trust entries (the only changed recap task). Overall recap: failed=0, unreachable=0. No guest package/application provisioning was performed in this bounded run. Full unbounded application convergence remains pending.
+
+### 2026-11-12 — Full Eddie run reached Docker IPA registration blocker
+
+- After removing debug chatter from manage_vm.py, full `eddie.yaml` passed VM convergence, base guest SSH/cloud-init, package upgrades and reboot, service-account setup, hypervisor-verified SSH key refresh, and IPA client convergence. Docker packages/service converged. It failed at the controller-side central IPA sudo-rule registration (`roles/machines/docker/files/register_ipa_host.py`), whose exception handler intentionally emits a generic message.
+- Safe controller check immediately after failure: `klist -s` reports no valid Kerberos ticket. The documented Docker registration flow requires `kinit admin`. Read-only `ipa` CLI checks could not initialize because the controller hostname did not resolve in this environment. No IPA policy change confirmed; helper failed. Stop before Ollama/Hermes plays; they did not execute. Full run recap: Eddie ok=58, changed=16, failed=1; heartogold ok=15, changed=1, failed=0.
+- To continue, authenticate the controller with `kinit admin`, then rerun the full playbook. The prior completed tasks should converge idempotently.
+
+### 2026-11-12 — Controller hostname resolution blocks IPA API startup
+
+- Resumed full Eddie run with a valid admin Kerberos ticket. VM convergence, base/package steps, existing IPA client convergence and Docker setup passed; run again failed at controller-side Docker IPA registration. Ollama and Hermes plays did not execute.
+- Read-only diagnosis confirms the controller configured hostname is `benjymouse.local.deepthot.org`, `/etc/hosts` maps only short name `benjymouse` to host-local loopback address, and `hostname -f` fails with name resolution. FreeIPA installed `ipapython.fqdn.gethostfqdn()` calls `socket.getaddrinfo(socket.gethostname())` during import; this raises before Kerberos-authenticated IPA API calls. `klist` showed a valid admin TGT, so ticket acquisition is not the current blocker.
+- No system or infrastructure changes made to resolve hostname. Next repair should make the controller FQDN resolve reproducibly, then rerun full eddie.yaml. Need decide whether to declare/manage the controller hosts mapping in repository automation or rely on a managed DNS record.
+
+### 2026-11-12 — Full Eddie playbook completed successfully
+
+- After Wi-Fi came up, controller FQDN `benjymouse.local.deepthot.org` resolved via LAN DNS to benjymouse.local.deepthot.org and `hostname -f` succeeded. The wired static interface remained active and routed LAN DNS queries. No DNS or host configuration was changed.
+- With a valid Kerberos ticket, reran full `eddie.yaml`: VM convergence, base packages/account, SSH identity refresh, existing IPA client, central Docker rule registration, Docker, K5200 driver, Ollama API/LAN check/model presence, Hermes container/profile/CLI and configured local inference all completed. Recap: Eddie ok=93 changed=15 failed=0 unreachable=0; heartogold ok=15 changed=0 failed=0 unreachable=0.
+- Hermes local inference task returned success. This clears the prior full provisioning errors; next acceptance is interactive user chat with Eddie and workflow evaluation.
+
+## 2026-11-13 — Gemini M705 Wayland investigation
+
+Inspected local benjymouse GNOME 50.1 Wayland session. input-remapper daemon active; M705 code 275 maps to Control+Alt+Shift+g; GNOME custom0 runs ~/.local/bin/gemini-toggle. Existing toggle relies on wmctrl/xdotool and unavailable gemini executable, with an overbroad pgrep match. No Gemini desktop/PWA launcher found. System /usr/bin/python3 evdev can create /dev/uinput virtual keyboard under existing user ACL; probe emitted no keys. Shell Eval returns false and Introspect.GetWindows denies access. No configurations changed; timestamped backups saved under ~/.local/state/gemini-toggle/backups (script, input-remapper-2 tree, media-keys dconf). Awaiting owner identification of intended Gemini app and confirmation that Ctrl+Shift+D toggles dictation there; end-to-end focus/toggle remains untested. All shell diagnostics logged through shared wrapper; no remote-desktop portal invoked.
+
+## 2026-11-13 — Gemini M705 Wayland implementation
+
+Owner clarified Ctrl+Shift+D starts dictation when Gemini is focused and authorized input control. Identified four Gemini windows through a narrow GNOME integration: three Chrome app windows and one regular Chrome Gemini tab. Closed those using focus-verified Ctrl+W under the then-current cleanup instruction; opened a fresh regular Gemini webpage. Owner subsequently clarified a separate app window should be used, leaving regular browser available. Final targeting excludes normal Chrome windows; a standalone Gemini app window was launched in existing Chrome Profile 4 (AI Testing), while the fresh regular webpage was left available. Earlier conversation tab can be recovered through Chrome history/recently closed tabs.
+
+Installed ~/.local/share/gnome-shell/extensions/gemini-focus@local (GNOME 50), active and enabled. Its local D-Bus API exposes only standalone Gemini focus/status, checks desktop lock, and does not enable Shell unsafe mode. Loaded live through local Looking Glass using virtual input; no logout or portal prompt. Replaced ~/.local/bin/gemini-toggle atomically (old script had a second hardlink) with /usr/bin/python3 script using system evdev and existing /dev/uinput ACL. It serializes clicks with flock, focuses existing standalone app or launches /opt/google/chrome/google-chrome --profile-directory=Profile 4 --app=https://gemini.google.com/app, waits for focus, registers a virtual keyboard and rechecks focus before Ctrl+Shift+D, releasing keys in finally. M705 preset and GNOME custom shortcut are unchanged. No packages, input permissions, or system services changed.
+
+Original script, full input-remapper-2 tree and media-key dconf backup: ~/.local/state/gemini-toggle/backups/20261113-221056. Rollback: disable gemini-focus@local and atomically restore backed-up gemini-toggle; mapping needs no restoration because unchanged. Extension files may then be removed. No repository commit made.
+
+Validation: Python/JavaScript syntax passed; active GNOME extension verified; close cleanup reduced Gemini window counts 4→0; cold launch and focus passed for webpage then final standalone app. Final wmclass chrome-gemini.google.com__app-Profile_4 was focused. Gemini accessibility exposed Dictate (^⇧D), confirming shortcut. Mocked input tests passed exact chord press/release order, no typing after focus change, and locked-desktop refusal. Accessibility reporting temporarily enabled for inspection and restored to original IsEnabled=false/ScreenReaderEnabled=false. Actual automated microphone toggle test was rejected by automatic approval review before execution because ambient audio could be transmitted to Google without explicit approval; no bypass attempted. Owner later said the microphone appears to be working, but full mouse-click start/stop/submission was not independently observed. No claim of end-to-end acceptance. Commands logged through shared wrapper throughout; connector/browser inventory actions are outside shell logging.
+
+### Gemini stop-and-submit and latency follow-up — November 13
+
+Owner confirmed Ctrl+Shift+D stops dictation and fills Gemini prompt but does not submit. Added per-window two-click state: first starts; second stops, waits 0.6s for final recognition, then Return submits. A failed submit remains pending and retries without restarting the microphone; new window ID resets state. Manual microphone changes can desynchronize this local tracker; ~/.local/bin/gemini-toggle --reset clears it without input. Next owner test should begin with microphone off. Removed repeated 0.8s evdev device registration and fixed 0.25s modifier sleep: GNOME extension now holds native Clutter virtual keyboard, exposes only dictate/submit actions, rechecks focus/lock and waits for shortcut modifiers to release. Script uses that narrow API; first launch readiness wait is 2.5s instead of 4s. Existing mouse/GNOME shortcut configuration remains unchanged. Pre-change backup: ~/.local/state/gemini-toggle/backups/20261113-223046 (script and extension). Original backup remains.
+
+Python/JS syntax and simulated two-click sequence, new-window reset, and failed-submit retry tests passed. Live extension API verified using invalid-action refusal with no key emission; final status active. Live loader initially missed dir metadata, briefly unexporting old service; corrected and live API restored before installing replacement. Temporary read-only accessibility check restored original screen-reader state in finally. Diagnostic filename inspect.py shadowed Python module and was renamed. No automated microphone activation or text submission performed; owner end-to-end test still required. Click state reset after installation. Detailed stdout/stderr preserved in shared log.
+
+### November 13 — On-demand weekly blog draft
+
+Owner requested an on-demand recap of accomplishments across projects, stored in Mostly Harmless as a draft for a future blog; no recurring automation or publication requested. Created reports/weekly/2026-11-13.md for November 9–13 from work log, Git history and selected chats, distinguishing completed results from pending acceptance. Directly confirmed finalized assets/visual/deepthot_welcome.png (earlier save-thread failure was superseded by actual local file) and deepthot-conversation-recovered.html (seven embedded images). Both are currently ignored by Git. Draft links to both existing files and includes private editorial/source notes for later removal. No assets moved or modified, no commit/push/publication.
+
+### November 13 — Detailed accomplishment inventory
+
+Owner clarified that the desired artifact is detailed accomplishment bullets across AI-assisted work since starting the current effort, including visible Gemini work, rather than blog prose restricted to this calendar week. Created reports/accomplishments-through-2026-11-13.md covering documented November 6–13 work plus clearly separated earlier saved design artifacts. Sources include worklog/changelog/Git history, selected conversations, and actual files. Records creation of the working Eddie system, not merely its maintenance; marks plans, rolled-back personality activation and pending tests. Separate Gemini history is not connected, so attribution/coverage is qualified. Preserved prior blog draft. No commit, publication, sharing, or asset moves.
+
+### November 13 — Saved reflective writing draft
+
+At owner request, saved the current AI-assisted reflection as writing/drafts/when-it-starts-to-feel-like-mine.md, incorporating the explicitly approved revised opening and preserving the rest of the displayed draft. Marked remaining text unreviewed, added brief continuation context including voice versus keyboard preferences, and verified readback. Intended for later review or transfer to another AI. No publication, sharing, commit, or push.
+
+## 2026-11-14 — ChatGPT mouse voice inspection checkpoint
+
+Owner requested inspection and proposed minimal change before automation edits. Read CONTROLLER.md/HANDOFF.md and referenced ChatGPT conversation. No automation, browser, microphone, shortcut, or permission settings changed.
+
+Live benjymouse session 3 is Wayland. input-remapper active. /home/denebeim/.config/input-remapper-2/config.json autoloads Logitech M705 preset _home_denebeim_; /home/denebeim/.config/input-remapper-2/presets/Logitech M705/_home_denebeim_.json maps EV_KEY 275 (BTN_SIDE) to Control_L + Alt_L + Shift_L + g. GNOME custom0 at /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ invokes /home/denebeim/.local/bin/gemini-toggle. Script launches /opt/google/chrome/google-chrome --profile-directory=Profile 4 --app=https://gemini.google.com/app if its narrow focus API finds no standalone window. Active extension /home/denebeim/.local/share/gnome-shell/extensions/gemini-focus@local/extension.js matches Gemini Chrome app wmclass/title, checks lock/focus/modifiers, and uses persistent Clutter virtual keyboard through org.gnome.Shell.Extensions.GeminiFocus D-Bus API (Focus/Send/Status). No wmctrl/xdotool in current script. First click Ctrl+Shift+D; second Ctrl+Shift+D, 0.6 second wait, Return; flock serialization, per-window runtime JSON, pending-submit retry, --reset. Live Status found Gemini app Profile_4, unfocused, tracker phase dictating; microphone state not independently observed.
+
+Upper physical button event unverified: raw /dev/input/event13 access denied even outside restricted execution; sysfs identifies Logitech M705 and key capability bitmap ffff0000 0 0 0 0. Do not assume adjacent code 276 is the requested physical button. Browser inventory exposed only empty in-app/MCP browsers, no existing Chrome tabs; missing ChatGPT Voice control cannot be diagnosed from this session yet. Official https://learn.chatgpt.com/docs/features/voice documents desktop Start/Stop voice chat and rollout/workspace dependencies, not proof of browser availability. No transient Try Voice control used.
+
+Presented proposed minimal change in chat: isolated /home/denebeim/.local/bin/chatgpt-voice-toggle plus separate GNOME shortcut/focus helper and one additional M705 mapping, preserving Gemini; verify actual browser Start/Stop Voice controls and observed state before wiring. Pending: identify upper-button event, inspect actual signed-in ChatGPT browser and missing Voice control, then implement/test. No implementation claimed.
+
+All shell commands used shared scripts/log-session.py; initial restricted live diagnostics failed and later read-only host queries succeeded. No automatic review rejection occurred. Sanitized output from this inspection is mirrored from eddie-session.log to private chat.log; connector/browser actions are outside shell capture. Existing unrelated working-tree changes preserved.
+
+## 2026-11-14 — Standing command log renamed
+
+Owner established chat.log as the ongoing default. Updated scripts/log-session.py, AGENTS.md, CONTROLLER.md and HANDOFF.md to use /home/denebeim/projects/mostly-harmless/chat.log. Existing log history retained; no log truncated or replaced. Shared wrapper and redaction remain in use. Historical worklog entries retain their original filenames.
+
+### Voice session and Gemini shared history follow-up
+
+Owner entered realtime Voice in this same task; spoken delegation arrived successfully. Owner reports Settings > Voice exposes a global Voice chat hotkey and a floating voice panel with mic/speaker/text controls. Focus-triggered panel movement remains a hypothesis, not observed evidence. Upper mouse press reportedly not captured by shortcut recorder. Suggested keyboard chord Ctrl+Alt+Shift+V is only a candidate, not saved or verified. Installed desktop launcher found at /usr/share/applications/chatgpt.desktop, Exec=chatgpt %U, executable /usr/bin/chatgpt. No launcher or mapping edits.
+
+Read owner's shared Gemini conversation https://share.gemini.google/6s0iTqxHMJma via in-app browser after web fetch failed. Title: Wayland Mouse Macro for Gemini. Historical raw evtest excerpt confirms lower button EV_KEY 275 BTN_SIDE (press/release), matching current preset. History describes initial wmctrl/xdotool, incorrect/reused trigger shortcuts, duplicate launches and owner-reported remote interaction prompts; these are historical reports, not fresh causal verification. Working installed GNOME extension/Python implementation inspected earlier supersedes those scripts. Do not restore obsolete script from shared chat. Owner wants Input Remapper retained for specific Logitech M705 and upper button to focus/launch ChatGPT and enter conversation, next press to exit to text. Built-in global Voice hotkey may simplify this, but its second-press behavior and cold-launch behavior remain unverified. Browser/connector reads are not shell output and are summarized here.
+
+Owner identified intended upper mouse button interactively in Input Remapper as Mouse Button 5. Installed inputremapper/configs/input_config.py mouse-button naming formula maps Mouse Button 5 to Linux code 276 (BTN_EXTRA), distinct from existing Gemini code 275. No mapping applied yet.
+
+### Upper-button preset staged, not applied
+
+Added EV_KEY 276 Mouse Button 5 -> Control_L + Alt_L + Shift_L + v in existing M705 _home_denebeim_.json preset. Verified original entries equal backed-up entries. Backup /home/denebeim/.local/state/chatgpt-voice-toggle/backups/20261114-102413/_home_denebeim_.json. Attempt to apply via input-remapper-control failed exit 4: no input devices visible to user tool. sudo -n --list-devices failed: interactive authentication required. No preset activation or Voice shortcut configuration verified. Owner then reiterated script must ensure target app is launched/focused before emitting Voice command; clarify spoken Gemini versus original ChatGPT target before wiring. New chord is currently only staged in preset; existing live Gemini behavior not intentionally changed.
+
+### ChatGPT sister launcher installed, app hotkey/live acceptance pending
+
+Desktop Polkit request succeeded: input-remapper-control enumerated Logitech M705 and started _home_denebeim_ preset, exit 0. Owner's initial button attempts occurred before launcher/Voice shortcut wiring and produced no observed Voice change.
+
+Installed /home/denebeim/.local/bin/chatgpt-voice-toggle and GNOME custom1 binding Ctrl+Alt+Shift+V, invoking it through shared logger. Script focuses/launches observed XWayland ChatGPT app, checks desktop lock and focus, serializes concurrent clicks, then emits distinct Ctrl+Alt+Shift+F12 through evdev/uinput, releasing keys in finally. App's native Voice hotkey must be set to that combination. Requested user to record it in Settings > Voice; clarified this is one manual app-setting step because current connection cannot operate Settings UI. No app keybindings file edited.
+
+Inspected installed app archive: global Voice command calls toggleGlobalHotkeySession; idle branch requests global_hotkey_new_thread, active branch stops session, pending branch cancels/reset. Thus global shortcut creates a new Voice thread rather than guaranteeing current-chat continuation.
+
+Verified live ChatGPT focus-only exit 0. Simulated focus-loss refusal emitted zero keys, simulated chord press/release ordering passed, real virtual keyboard creation without keys passed. No actual Voice key sent by agent. Gemini script/extension left untouched and custom0 fields compared unchanged. Backed up prior GNOME shortcut list under ~/.local/state/chatgpt-voice-toggle/backups/20261114-111910. Added MOUSE-VOICE.md with paths, architecture, backup, activation, rollback and pending acceptance. Still pending app hotkey setting and end-to-end user start/stop/cold-launch/text-return/Gemini regression checks.
+
+## Personal mouse voice snapshot — 2026-11-14
+
+Added ai-twiddles/ with two playbooks, captured installed helpers and brief personal-use instructions. No tests or playbook application per owner request; no desktop settings changed, commit or push. Initial authoring command failed because system Python lacked PyYAML; used JSON (valid YAML) without installing anything. GitHub issue creation rejected by automatic approval review for external disclosure of personal desktop configuration to an unverified destination; pending explicit owner approval. Unrelated changes preserved.
+
+## AI twiddles user-home correction — 2026-11-14
+
+Created local branch codex/ai-twiddles-user-home. Both playbooks gather the running user home from Ansible facts, pass paths/preset/logger location as arguments, and template Gemini Chrome profile (Default, override supported). Removed personal username/home paths in ai-twiddles; fixed literal newline writing. Both Ansible syntax checks, Python compilation checks and scoped whitespace review passed. No playbook application or desktop changes. Original directory was ignored/untracked; explicitly staged only its eight files. Existing dirty files excluded from commit. Publication (issue/push/PR/merge) awaits owner review. Detailed notes: ai-twiddles/BRANCH-NOTES.md.
+
+## AI twiddles readability and caveats — 2026-11-14
+
+Clarified owner-reported Ubuntu 26.04 LTS working live setup versus syntax-only unapplied playbooks, local desktop-user context and existing GNOME/app assumptions. Converted playbooks from JSON representation to conventional YAML with unchanged parsed values; pretty-printed extension metadata and Gemini runtime state JSON (preset/config writers already indented). Both syntax checks, embedded Python/helper compilation and scoped whitespace check passed. No live application or publication; scoped ai-twiddles-only local commit on codex/ai-twiddles-user-home.
+
+## Per-twiddle directories — 2026-11-14
+
+Reorganized ai-twiddles into logitech-m705-gemini-dictation/ and logitech-m705-chatgpt-voice/, each with playbook.yaml, needed files/ and its own usage/platform/prerequisite/caveat README. Root README is a short rough-experiment index. Logger path updated for deeper playbook location; local source references retained. Branch history notes preserved. Moved references/links and both syntax checks pass; no live application/publication. Scoped local commit only; unrelated dirty files excluded.
+
+## Mouse experiment publication preparation — 2026-11-14
+
+Original feature branch had unrelated Hermes ancestry. Created codex/ai-twiddles-m705 from refreshed origin/main in /tmp/mostly-harmless-m705-pr and cherry-picked only three twiddle commits. Standalone directory now includes its logger and adapted mouse setup/rollback notes, concise per-experiment commands and caveats. Detailed original branch notes retain user philosophy and AI authorship disclosure (exact model identifier unavailable). Syntax/reference checks passed; no deployment. Issue creation again rejected by automatic approval review for external disclosure; no issue workaround attempted. User authorized open PR and no merge; review suggestions await user choice.
+
+## Publication blocked by automatic review — 2026-11-14
+
+Publication outcome: clean publication branch codex/ai-twiddles-m705 ends at aa805cf in /tmp/mostly-harmless-m705-pr. Its diff against origin/main is exactly 11 files under ai-twiddles; no unrelated repository files. Both syntax checks, source/logger/link resolution, Python compilation, JSON parsing and whitespace review passed without applying playbooks. Original detailed branch preserved at 1988871 before this outcome note. Automatic approval review rejected both issue creation and push for insufficient trusted authorization to disclose the personal desktop configuration/helper code to denebeim/mostly-harmless. No issue, push or PR succeeded; no review/check monitoring possible. No alternate publication route attempted. Need direct owner approval of this exact destination and content before retrying. No merge.
+
+Publication succeeded after direct owner authorization: pushed codex/ai-twiddles-m705 at aa805cf and opened PR #12, https://github.com/denebeim/mostly-harmless/pull/12 (Capture Logitech M705 Gemini dictation and ChatGPT Voice experiments), against main. Verified open, not merged, 11 files under ai-twiddles. Authorship disclosure included; exact model identifier unavailable. Original detailed branch preserved; no merge or review-driven changes.
+
+## 2026-11-14 — Durable independent work-log branch
+
+Owner confirmed mostly-harmless is always the work-log destination and authorized
+regular commits/pushes, including smaller meaningful developments. Created
+`codex/work-log` in isolated `/tmp/mostly-harmless-work-log` from refreshed
+`origin/main` at a4b88f6. Copied the existing log without feature code; original
+dirty checkout and Eddie branches preserved. Main already contains mouse experiment
+PR #12 at this refreshed baseline; this task did not merge it. Eddie follow-up
+remains deferred for owner polish and was not merged.
+
+Added WORKLOG-WORKFLOW.md and AGENTS.md guidance for event-based documentation,
+explicit path staging, reviewed commits/pushes and remote-hash verification before
+handoff. Installed the workflow reference in the original checkout as well. The
+remote branch is durable; the temporary checkout is recreatable. No scheduled
+automation or background syncing exists. Raw chat.log remains private/uncommitted.
+
+Initial unprivileged fetch failed on Git metadata permissions and local SSH system
+configuration permissions. Authorized elevated Git access with ssh -F /dev/null
+refreshed origin successfully. Publication verification is recorded in the next
+checkpoint; do not treat branch creation alone as a completed push.
+
+### Work-log publication blocked — November 14
+
+Documentation-only checkpoint c742f1b saved locally; staged whitespace review
+passed and only AGENTS.md, WORKLOG-WORKFLOW.md and WORKLOG.md were included.
+Automatic approval review rejected the combined commit/push request before
+execution because the historical log may contain nonpublic infrastructure details
+and the reviewer did not accept the relayed authorization for this exact payload
+and GitHub destination. A separate local commit succeeded. No push or alternate
+publication route was attempted after rejection. Direct owner approval of publishing
+these three files to denebeim/mostly-harmless on codex/work-log is required.
+Remote existence/hash remains unverified; initial publication is not complete.
+No Eddie merge, feature-code commit, timed automation or background sync occurred.
+
+### Owner scope correction — November 14
+
+Owner requested only WORKLOG.md on the independent branch. Removed the unsolicited
+WORKLOG-WORKFLOW.md from both checkouts after preserving its exact text for review;
+removed only the setup-specific continuity section from AGENTS.md and preserved
+all preexisting agent guidance. Replaced the unpublished setup commits with a
+work-log-only commit. Earlier setup commit hashes above describe superseded local
+history. Publication remains blocked; no push was attempted. The remote branch
+is not verified or backed up yet. Ordinary tracked AGENTS.md content follows each
+branch checkout; untracked local AGENTS.md does not gain branch-specific versions.
+
+### Public log address sanitization — November 14
+
+At owner request, replaced exact internal addresses with existing host names or
+service/subnet roles, including DMZ, Eddie, Benjymouse, Pi-hole, LAN gateway,
+WireGuard tunnel peers/subnets, test guest and loopback. No uncertain host mappings
+were invented. Replaced the unpublished branch checkpoint so its newly introduced
+WORKLOG.md history contains only the sanitized version. The origin/main baseline
+already contains addresses in historical WORKLOG.md content; this local edit does
+not erase existing remote history. No push attempted; approval blocker remains.
+An initial masked diagnostic missed sentence-ending addresses and printed two
+address occurrences to the existing private command log; the matcher was corrected
+before edits and validation. Raw chat.log was not rewritten.
