@@ -19,3 +19,9 @@ Results: both Ansible syntax checks passed; embedded configuration Python and su
 README now distinguishes the owner-reported Ubuntu 26.04 LTS live setup from syntax-only playbook validation, and records desktop-user context, prerequisites and existing app/extension assumptions. Converted JSON-form playbooks to conventional YAML with literal blocks for embedded Python; parsed values were compared before and after. Extension metadata is indented JSON with unchanged values. Gemini runtime state JSON is now indented; preset/config writers already use indent=4. No live execution.
 
 Validation: both Ansible syntax checks, embedded Python/helper compilation and scoped diff whitespace checks passed. YAML conversion and metadata formatting preserved parsed values. No deployment or functional testing.
+
+## Per-twiddle organization
+
+Moved each playbook and its own helpers under logitech-m705-gemini-dictation/ or logitech-m705-chatgpt-voice/. Each README identifies its hardware/action and owns its platform, prerequisites, commands and caveats. Root README is a short personal-experiment index. Local files/ sources remain relative to each moved playbook; logger reference now walks up two directories to the checkout. Prior notes above are historical; current usage paths are in the per-twiddle READMEs. No live application or publication.
+
+Validation: moved helper source paths, checkout logger location, README links and usage paths resolve. Both moved playbooks pass Ansible syntax checks; embedded Python compiles and scoped whitespace check passes. No playbook deployment or desktop changes.
