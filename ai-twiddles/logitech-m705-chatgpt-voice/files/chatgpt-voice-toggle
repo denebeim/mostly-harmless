@@ -1,0 +1,107 @@
+#!/usr/bin/python3
+"""Focus/launch ChatGPT, then invoke its configured native Voice toggle."""
+import argparse
+import fcntl
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+APP = "/usr/bin/chatgpt"
+# Set this distinct combination in ChatGPT Settings > Voice > Voice chat hotkey.
+VOICE_KEYS = ("KEY_LEFTCTRL", "KEY_LEFTALT", "KEY_LEFTSHIFT", "KEY_F12")
+
+def run(*args):
+    return subprocess.run(args, check=True, text=True, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE).stdout.strip()
+
+def unlocked():
+    value = run("/usr/bin/gdbus", "call", "--session", "--dest",
+                "org.gnome.ScreenSaver", "--object-path", "/org/gnome/ScreenSaver",
+                "--method", "org.gnome.ScreenSaver.GetActive")
+    if value != "(false,)":
+        raise RuntimeError("Desktop is locked or lock status is unknown; no input sent")
+
+def windows():
+    result = []
+    for line in run("/usr/bin/wmctrl", "-lx").splitlines():
+        if re.search(r"\.Chatgpt\s", line, re.I):
+            result.append((int(line.split()[0], 16), line.endswith(" ChatGPT")))
+    return sorted(result, key=lambda w: not w[1])
+
+def active():
+    value = run("/usr/bin/xprop", "-root", "_NET_ACTIVE_WINDOW")
+    match = re.search(r"0x[0-9a-fA-F]+", value)
+    return int(match.group(), 16) if match else None
+
+def focus():
+    unlocked()
+    deadline = time.monotonic() + 25
+    launched = False
+    ready_after = 0
+    while time.monotonic() < deadline:
+        candidates = windows()
+        if candidates:
+            focused = active()
+            ids = [w[0] for w in candidates]
+            target = focused if focused in ids else ids[0]
+            if focused != target:
+                run("/usr/bin/wmctrl", "-ia", hex(target))
+            if active() == target and time.monotonic() >= ready_after:
+                unlocked()
+                return target
+        elif not launched:
+            subprocess.Popen([APP], start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            launched = True
+            ready_after = time.monotonic() + 3
+        time.sleep(.1)
+    raise RuntimeError("ChatGPT did not acquire focus; no input sent")
+
+def send_voice(target):
+    from evdev import UInput, ecodes
+    keys = [getattr(ecodes, name) for name in VOICE_KEYS]
+    # A native virtual keyboard avoids X11 synthetic-key/portal behavior.
+    with UInput({ecodes.EV_KEY:keys}, name="chatgpt-voice-toggle keyboard") as keyboard:
+        time.sleep(.8)  # Allow the compositor to register the virtual keyboard.
+        unlocked()
+        if active() != target:
+            raise RuntimeError("ChatGPT lost focus; no input sent")
+        pressed = []
+        try:
+            for key in keys:
+                keyboard.write(ecodes.EV_KEY, key, 1)
+                pressed.append(key)
+            keyboard.syn()
+            time.sleep(.04)
+        finally:
+            for key in reversed(pressed):
+                keyboard.write(ecodes.EV_KEY, key, 0)
+            keyboard.syn()
+        time.sleep(.05)
+    print("Sent ChatGPT native Voice toggle (Ctrl+Alt+Shift+F12)")
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--focus-only", action="store_true", help="Verify focus without changing Voice")
+    args = parser.parse_args()
+    runtime = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
+    with (runtime/"chatgpt-voice-toggle.lock").open("w") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("Previous ChatGPT button action is still running")
+            return
+        target = focus()
+        print("ChatGPT focused")
+        if not args.focus_only:
+            send_voice(target)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as error:
+        print(f"chatgpt-voice-toggle: {error}", file=sys.stderr)
+        sys.exit(1)
