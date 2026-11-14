@@ -749,3 +749,31 @@ not erase existing remote history. No push attempted; approval blocker remains.
 An initial masked diagnostic missed sentence-ending addresses and printed two
 address occurrences to the existing private command log; the matcher was corrected
 before edits and validation. Raw chat.log was not rewritten.
+
+### Pending security discussions and publication approval — November 14
+
+Owner reviewed the sanitized work log and explicitly approved pushing this
+work-log-only branch to denebeim/mostly-harmless, accepting existing historical
+address/topology disclosure without rewriting already-remote history. Keep exact
+internal IP addresses out of future entries. Earlier approval-blocker entries are
+historical; successful publication still requires remote verification.
+
+Pending DMZ containment design/audit: owner wants a compromise, even with root,
+to be unable to pivot into internal systems or obtain reusable privileged
+credentials. Evaluate egress, identity/IPA trust, SSH administration, and placement
+of credentials and private keys later. This is a desired security property to
+evaluate, not verified current behavior or a guaranteed property. Owner wonders
+whether the DMZ is directly internet-connected; topology is unverified here.
+
+Pending SSH private-key inventory and laptop compromise/recovery discussion:
+owner believes private SSH keys may exist only on the laptop, but is unsure.
+Record this as an unverified belief requiring a later audit and recovery planning.
+Owner is thinking about these questions and needs to think further. No key
+inspection, infrastructure audit or security configuration changes were performed
+for these notes. Eddie remains deferred and unmerged.
+
+Publication retry after owner approval was rejected before execution by automatic
+approval review: the reviewer did not accept relayed approval as trusted direct
+authorization for this infrastructure-derived log and GitHub destination. No push
+occurred; no alternate publication route attempted. Notes remain saved locally;
+remote branch/upstream verification is pending.
