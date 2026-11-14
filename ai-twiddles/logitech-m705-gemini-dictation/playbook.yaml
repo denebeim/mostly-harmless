@@ -54,7 +54,7 @@
              subprocess.run(['gsettings','set',schema+'.custom-keybinding:'+path,field,repr(value)],check=True)
           - '{{ target_home }}'
           - '{{ mouse_preset }}'
-          - '{{ playbook_dir | dirname | dirname }}/scripts/log-session.py'
+          - '{{ playbook_dir | dirname }}/log-session.py'
       changed_when: true
   become: false
   vars:
