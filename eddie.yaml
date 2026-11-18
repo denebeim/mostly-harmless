@@ -12,6 +12,7 @@
       machine: q35
       local_users: [hermes]
       docker_members: [hermes]
+      docker_ipa_group: docker-admins
       update_packages: true
       tags: [ipa, docker, gpu, ollama, hermes]
       hostpci:

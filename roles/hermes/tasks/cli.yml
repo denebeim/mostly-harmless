@@ -1,0 +1,68 @@
+# SPDX-License-Identifier: GPL-3.0-only
+---
+- name: Select the local-first CLI profile
+  ansible.builtin.copy:
+    dest: "{{ hermes_data_dir }}/active_profile"
+    content: "{{ hermes_cli_profile }}\n"
+    owner: "{{ hermes_user }}"
+    group: "{{ hermes_group }}"
+    mode: '0600'
+  tags: [hermes_cli]
+
+- name: Install the Docker-backed host command
+  ansible.builtin.template:
+    src: hermes.sh.j2
+    dest: /usr/local/bin/hermes
+    owner: root
+    group: root
+    mode: '0755'
+    backup: true
+    validate: /bin/sh -n %s
+  tags: [hermes_cli]
+
+- name: Expose VM tools through the global login shell environment
+  ansible.builtin.copy:
+    src: deepthot-tools.sh
+    dest: /etc/profile.d/deepthot-tools.sh
+    owner: root
+    group: root
+    mode: '0644'
+    validate: /bin/sh -n %s
+  tags: [hermes_cli]
+
+- name: Load the same environment in interactive non-login Bash shells
+  ansible.builtin.blockinfile:
+    path: /etc/bash.bashrc
+    marker: "# {mark} ANSIBLE DEEPTHOT TOOLS"
+    block: |
+      if [ -r /etc/profile.d/deepthot-tools.sh ]; then
+          . /etc/profile.d/deepthot-tools.sh
+      fi
+    validate: /bin/bash -n %s
+  tags: [hermes_cli]
+
+- name: Inspect the old service account command
+  ansible.builtin.stat:
+    path: "/home/{{ hermes_user }}/.local/bin/hermes"
+    follow: false
+  register: hermes_old_launcher
+  tags: [hermes_cli]
+
+- name: Preserve the native command before replacing it
+  ansible.builtin.copy:
+    src: "/home/{{ hermes_user }}/.local/bin/hermes"
+    dest: "/home/{{ hermes_user }}/.local/bin/hermes.native"
+    remote_src: true
+    force: false
+    owner: "{{ hermes_user }}"
+    group: "{{ hermes_group }}"
+    mode: '0755'
+  when: hermes_old_launcher.stat.isreg | default(false)
+  tags: [hermes_cli]
+
+- name: Retire the per-user command in favor of the global command
+  ansible.builtin.file:
+    path: "/home/{{ hermes_user }}/.local/bin/hermes"
+    state: absent
+  when: hermes_old_launcher.stat.exists or hermes_old_launcher.stat.islnk | default(false)
+  tags: [hermes_cli]

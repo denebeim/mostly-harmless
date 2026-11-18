@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-09 — Global Docker-backed Hermes CLI
+
+- Added the documented GPLv3 `hermes.yaml` application entrypoint, imported by
+  the normal VM lifecycle after Docker and local inference prerequisites.
+- Exposed `hermes` globally through /usr/local/bin, /etc/profile.d and the
+  system Bash startup chain; retained the native launcher for rollback.
+- Selected the existing local Qwen/Ollama profile and explicitly pinned shared
+  gateway management to the default profile. Local shared metrics are disabled.
+- Made operator Docker access reproducible from the configured IPA admin group.
+
+Validation: fresh SSH command/profile checks passed for both configured users,
+the local interactive prompt opened, and one local inference returned the expected
+response with exit 0. Global PATH checks passed without user startup files;
+targeted CLI convergence settled changed=0. Both playbook syntax checks pass.
+The reported stdin-not-a-terminal warning and unexpected interactive input remain
+follow-up work. No heavy tests or zero-to-configured rebuild performed.
+
+
 ## 2026-11-07 — Eddie brought to life
 
 - Rebuilt the former Hermes VM as Eddie (Proxmox VM 314), with a serial console,
