@@ -1,6 +1,6 @@
 # Codex experiments
 
-This is Codex's area for personal experiments in mostly-harmless. Keep new Codex experiments here, on a `codex/` branch. The owner authorizes Codex to commit and merge changes in this area to the repository's actual default branch without asking again for each routine commit or merge. Check the remote default branch instead of assuming its name. At setup, it is `main`.
+This is Codex's area for personal experiments in mostly-harmless. Keep new Codex experiments here, on a `codex/` branch. The owner authorizes autonomous work, commits and pushes on Codex's experimental branch. Every change to the repository's actual default branch requires the owner's explicit approval after they hear the report, discuss it and inspect the work. Approval of this general workflow is not approval of any future integration. Check the remote default branch instead of assuming its name. At setup, it is `main`.
 
 ## Two workflows
 
@@ -9,7 +9,8 @@ This is Codex's area for personal experiments in mostly-harmless. Keep new Codex
 1. Start an isolated `codex/` branch from the current remote default branch. Use a worktree when the owner's checkout has other changes.
 2. Keep implementation, notes and scoped instructions under `ai-twiddles/codex/`. Record significant actions in WORKLOG.md on the separate `work-log` branch.
 3. Review the diff and run checks appropriate to the actual change. Stage explicit paths only.
-4. Commit and integrate the scoped experiment autonomously. A normal pull request is the preferred merge route. Respect branch protection, reviews and checks; never bypass them. If access or protection blocks the merge, leave a reviewable branch/PR and report the exact blocker.
+4. Commit and push the scoped experiment autonomously on its experimental branch. Prepare a reviewable pull request and report the concrete changes and checks.
+5. Let the owner discuss and inspect the work. Merge into the actual default branch only after the owner explicitly approves that reviewed change. Keep the PR pending until then; do not enable automatic merge in anticipation of approval. Respect branch protection, required reviews and checks without bypassing them. If access or protection blocks an approved merge, preserve the reviewable result and report the blocker.
 
 This permission covers the experimental implementation and its technical operating notes. It does not authorize publishing writing in the owner's name.
 
@@ -21,7 +22,7 @@ This permission covers the experimental implementation and its technical operati
 4. The owner makes the commit.
 5. Update the work log and prepare the pull request together.
 
-Autonomous experimental commits and merges do not shorten this publication workflow.
+Autonomous experimental work and branch commits do not shorten this publication workflow or replace the owner's approval before integration into main.
 
 ## Existing mouse buttons
 
