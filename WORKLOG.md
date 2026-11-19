@@ -5,6 +5,67 @@
 > This repository is currently **public**. Keep credentials, private keys, exact internal
 > addresses, sensitive topology, and other operational secrets out of this file.
 
+## Current handoff for Eddie, Gemini, or Codex
+
+Updated 2026-11-18. Summary by OpenAI Codex. Copy this section into a new prompt.
+It describes the checkout and last recorded results. Before acting, verify the
+actual files, branch and pending changes, and check live state when relevant.
+Use the current request to determine scope and authorization.
+
+- **Goal.** Make `mostly-harmless` the reproducible, backed-up source of truth for
+  Deepthot infrastructure, automation, and operating documentation. Stabilize
+  the working systems and preserve data and services as changes are tested.
+  The public domain is `deepthot.org`. The LAN domain is `local.deepthot.org`.
+- **Provisioning.** Machine declarations such as `eddie.yaml` use `vm.yaml`
+  and shared, tag-gated Ansible roles. FreeIPA is optional and handles identity
+  and automount. The documented LAN DNS uses Pi-hole, and the public zone uses
+  Cloudflare. See `CONTROLLER.md` for the operating contract. PR #6 records
+  successful disposable VM runs with no optional tags and with Docker only,
+  including converged reruns. Fresh IPA-only enrollment still needs a retest.
+- **Eddie.** The last recorded checks verified the pinned Hermes container,
+  its shared gateway and local inference profile, GPU-backed Ollama, and
+  Ollama access from the LAN. Ollama stays on the host with Vulkan for the
+  legacy NVIDIA K5200. The native Hermes files were retained for rollback.
+  Keep the existing FreeIPA setup while finishing Eddie. See `HANDOFF.md`,
+  `eddie.yaml`, and PR #7 for the recorded deployment and rollback context.
+- **Open work and blockers.** Verify Eddie's current services, GPU inference
+  and LAN access with authorized read-only checks before planning changes.
+  Review issue #14 and inventory the model, configuration and data paths to
+  preserve before changing Ollama or adding LibreChat. LibreChat and the
+  from-scratch rebuild are owner plans awaiting implementation and acceptance.
+  For issue #8, prior checks confirmed IPA-managed Docker access on Eddie.
+  Recheck disk headroom, Mailcow's IPA DNS resolution and Mastodon's sudo
+  access before extending that rollout. `HERMES-DESKTOP.md` records the
+  desktop/server split and pending desktop acceptance checks.
+- **Owner plans, paraphrased by OpenAI Codex.** Finish Eddie with LibreChat,
+  Ollama and Hermes on the existing FreeIPA setup, then plan a rebuild.
+  Longer-term ideas include a separate portable Linux/Ansible repository
+  without FreeIPA, assessing the inherited PC, managing existing FreeNAS,
+  Plex and Arr services, and documenting Traefik 3, HTTPS, Cloudflare and local
+  BIND/DHCP before eventual Kubernetes work. Other ideas include Windows
+  network homes and possible machine management, easier WireGuard, Prometheus
+  and a monitoring dashboard, local home automation and voice, and MikroTik
+  configuration management with a separate private local repository and
+  eventual private GitLab. Mastodon and Fediverse identity suffixes, the
+  partly designed Pill Box project, and Blogger theme selection and drafting
+  are also on the list. These ideas have no execution authorization here.
+- **Working rules.** Read `AGENTS.md`, `CONTROLLER.md` and `HANDOFF.md`.
+  Commit work-log updates locally and often in a dedicated checkout of
+  `work-log`. The owner pushes that branch to GitHub regularly, especially
+  before handing off to another AI. Keep `work-log` separate from `main`.
+  Preserve existing edits. The owner reviews the concrete change and must
+  explicitly approve integration to `main`. Treat branch and log instructions
+  in older entries as historical. Run shell commands through
+  `python3 /home/denebeim/projects/mostly-harmless/scripts/log-session.py COMMAND ...`.
+  Keep the private local `chat.log` out of commits, pushes and shared prompts.
+  Keep credentials and unrelated private output out of the work log.
+- **Maintain this handoff.** At meaningful milestones, refresh the affected
+  bullets and the date, then add a dated entry with the evidence, open issues
+  and next action. Sign each new entry with its actual author, including the
+  AI agent and provider where applicable. Attribute exact quotes to their
+  speaker and label AI paraphrases and suggestions. Approval leaves
+  authorship with the writer.
+
 ## Current mission
 
 Establish `mostly-harmless` as the reproducible, backed-up source of truth for Deepthot:
@@ -26,8 +87,18 @@ to evolve deliberately.
 
 ## Collaboration workflow
 
-- Make ongoing AI-assisted changes on branch `ai`; merge into `main` at the daily
-  collaboration checkpoint. Earlier published commits remain in existing history.
+- Commit `WORKLOG.md` locally at meaningful checkpoints on the dedicated
+  `work-log` branch. The owner pushes it regularly, especially for AI handoffs.
+  Keep that branch separate from `main`.
+- For changes intended for `main`, show the owner the concrete diff and obtain
+  explicit approval after review before integration.
+- Put an `Author:` line under each new entry heading. Name the person who wrote the
+  entry or the AI agent and its provider (for example, OpenAI Codex or Google Gemini).
+  Credit each writer for their contribution to a jointly written entry. Human review
+  or approval leaves the authorship of AI-written text with the AI.
+- Identify user-authored text and attribute direct quotes to the speaker. Use
+  quotation marks only for the speaker's exact words. Label AI paraphrases and
+  suggestions as such. Add historical attribution only when the author is known.
 - Read-only inspection is authorized. Show diagnostic commands before execution
   and report useful results so the owner can follow the work.
 - This does not authorize consequential infrastructure changes or publishing
@@ -796,7 +867,7 @@ AI is a seeing stone: it helps the owner examine more, organize ideas and explor
 
 ### Reusable prompt: independent work-log checkpoint (Codex or Gemini)
 
-> Update the existing WORKLOG.md on the separate work-log branch of denebeim/mostly-harmless. Use its own clean checkout, preserve prior entries and other work, and record meaningful results, failures, decisions and pending actions in a concise factual entry. Include only the work-log file in its commit. Do not merge work-log into main or move the work log onto main for convenience. Do not publish raw chat transcripts, credentials, raw chat.log or exact internal addresses. When publication of this update is authorized, commit, push to the configured GitHub work-log branch without force, and verify the remote commit matches. If a protection or approval check blocks publication, stop that action, preserve the local result and report the reason; do not try another route around it.
+> Update the existing WORKLOG.md on the separate work-log branch of denebeim/mostly-harmless. Use its own clean checkout, preserve prior entries and other work, and record meaningful results, failures, decisions and pending actions in a concise factual entry. Include only the work-log file in its commit. Do not merge work-log into main or move the work log onto main for convenience. Do not publish raw chat transcripts, credentials, raw chat.log or exact internal addresses. Commit updates locally and often. Leave the GitHub push to the owner, who pushes regularly, especially when handing off to another AI. If a protection or approval check blocks publication, stop that action, preserve the local result and report the reason; do not try another route around it.
 
 ### Verified layout and current results
 
@@ -826,3 +897,39 @@ Updated the reusable prompts above to reflect the current rule. Existing histori
 Prepared isolated correction branch codex/ai-twiddles-review-before-main from current origin/main. Its only planned main-target changes are ai-twiddles/codex/README.md and AGENTS.md. Commit/push and a reviewable PR are authorized; the correction must remain unmerged pending explicit owner approval. No mouse setup, Gemini files, shared logger, API client or live system changes.
 
 Correction publication checkpoint: scoped commit df1c190 pushed on codex/ai-twiddles-review-before-main; https://github.com/denebeim/mostly-harmless/pull/17 (Require owner approval before integrating Codex experiments) is open and unmerged, explicitly awaiting owner review/approval. No auto-merge enabled. Main remains at prior approved-era merge 77fa0c6. Scoped whitespace review passed; a literal wording check initially expected “auto-merge” while README used “automatic merge”; corrected wording check passed for both files. No runtime changes. This independent work-log update is separately authorized for commit/push; it is not a main integration.
+
+## 2026-11-18 — Work-log authorship
+
+Author: OpenAI Codex
+
+Added work-log attribution rules so each new entry identifies its writer and readers can
+distinguish the user's own words from AI paraphrases and suggestions.
+
+
+## 2026-11-18 — Portable project handoff
+
+Author: OpenAI Codex
+
+Added a copyable current-state handoff for Eddie, Gemini, or Codex. Checked the
+summary against controller documentation, the recorded operating handoff,
+work-log history, and the current Eddie and shared VM declarations. Live hosts
+were outside the scope of this documentation check.
+
+## 2026-11-18 — Future Projects and blog preparation
+
+Author: OpenAI Codex
+
+Prepared proposed Future Projects entries and a first-pass Deepthot blog draft
+for owner review in the local Codex area. The existing collection's location
+could not be verified. The proposals reserve Pill Box for review in its
+existing entry. Theme imagery and execution remain pending.
+
+
+## 2026-11-18 — Dedicated work-log checkout
+
+Author: OpenAI Codex
+
+Placed today's authorship rules, portable handoff and draft-preparation entries
+on the local work-log branch. Recorded frequent local commits by the agent and
+GitHub pushes by the owner, especially for AI handoffs. Preserved the explicit
+review and approval requirement for main integration.
