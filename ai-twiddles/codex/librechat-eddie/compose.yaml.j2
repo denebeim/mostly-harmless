@@ -1,0 +1,56 @@
+services:
+  api:
+    image: "{{ librechat_image }}"
+    restart: unless-stopped
+    ports:
+      - "{{ librechat_ip }}:80:3080"
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3080"
+      DOMAIN_CLIENT: "{{ librechat_url }}"
+      DOMAIN_SERVER: "{{ librechat_url }}"
+      MONGO_URI: mongodb://mongodb:27017/LibreChat
+      ENDPOINTS: custom
+      SEARCH: "false"
+      ALLOW_EMAIL_LOGIN: "true"
+      ALLOW_REGISTRATION: "false"
+      ALLOW_SOCIAL_LOGIN: "false"
+      ALLOW_SOCIAL_REGISTRATION: "false"
+    labels:
+      org.deepthot.librechat.config-sha1: "{{ librechat_config.checksum }}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./librechat.yaml:/app/librechat.yaml:ro
+      - uploads:/app/uploads
+      - logs:/app/logs
+      - images:/app/client/public/images
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - default
+      - database
+  mongodb:
+    image: "{{ librechat_mongo_image }}"
+    restart: unless-stopped
+    volumes:
+      - mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ping: 1}).ok === 1 ? 0 : 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - database
+
+networks:
+  database:
+    internal: true
+
+volumes:
+  uploads:
+  logs:
+  images:
+  mongo:

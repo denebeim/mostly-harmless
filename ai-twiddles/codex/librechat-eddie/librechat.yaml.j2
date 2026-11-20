@@ -1,0 +1,12 @@
+version: 1.3.19
+cache: true
+endpoints:
+  custom:
+    - name: Ollama
+      apiKey: ollama
+      baseURL: http://host.docker.internal:11434/v1/
+      models:
+        default: ["{{ librechat_model }}"]
+        fetch: false
+      titleConvo: false
+      modelDisplayLabel: Ollama

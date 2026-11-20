@@ -1,0 +1,115 @@
+---
+- name: Deploy LibreChat on Eddie
+  hosts: eddie
+  gather_facts: false
+  vars:
+    librechat_ip: 192.168.42.132
+    librechat_url: http://eddie
+    librechat_image: ghcr.io/librechat-ai/librechat:v0.8.9@sha256:51550d041e298f0740d98743a3ffdeac9be4cf6dcb1bcd938e6db8779c420fc4
+    librechat_mongo_image: mongo:8.0.20@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef
+    librechat_model: "qwen3.5:4b"
+  tasks:
+    - name: Resolve the deployment account's home
+      ansible.builtin.command: printenv HOME
+      register: librechat_home
+      changed_when: false
+      check_mode: false
+
+    - name: Confirm Eddie is the selected host
+      ansible.builtin.command: hostname -s
+      register: librechat_hostname
+      changed_when: false
+      failed_when: librechat_hostname.rc != 0 or librechat_hostname.stdout != 'eddie'
+      check_mode: false
+
+    - name: Check the existing Ollama model
+      ansible.builtin.uri:
+        url: http://127.0.0.1:11434/api/tags
+        use_proxy: false
+      register: librechat_ollama
+      failed_when: librechat_model not in (librechat_ollama.json.models | map(attribute='name') | list)
+      check_mode: false
+
+    - name: Manage the Eddie LibreChat project
+      vars:
+        librechat_dir: "{{ librechat_home.stdout }}/.local/share/librechat-eddie"
+      block:
+        - name: Create private project directory
+          ansible.builtin.file:
+            path: "{{ librechat_dir }}"
+            state: directory
+            mode: "0700"
+
+        - name: Generate persistent instance secrets on first install
+          ansible.builtin.shell:
+            cmd: |
+              set -eu
+              umask 077
+              temporary=$(mktemp .env.XXXXXXXX)
+              trap 'rm -f "$temporary"' EXIT
+              {
+                printf 'CREDS_KEY=%s\n' "$(openssl rand -hex 32)"
+                printf 'CREDS_IV=%s\n' "$(openssl rand -hex 16)"
+                printf 'JWT_SECRET=%s\n' "$(openssl rand -hex 32)"
+                printf 'JWT_REFRESH_SECRET=%s\n' "$(openssl rand -hex 32)"
+              } > "$temporary"
+              ln "$temporary" .env
+            chdir: "{{ librechat_dir }}"
+            creates: "{{ librechat_dir }}/.env"
+          no_log: true
+
+        - name: Render Ollama endpoint configuration
+          ansible.builtin.template:
+            src: librechat.yaml.j2
+            dest: "{{ librechat_dir }}/librechat.yaml"
+            mode: "0644"
+          register: librechat_config
+
+        - name: Render the isolated Compose project
+          ansible.builtin.template:
+            src: compose.yaml.j2
+            dest: "{{ librechat_dir }}/compose.yaml"
+            mode: "0600"
+          when: not ansible_check_mode
+
+        - name: Converge LibreChat and MongoDB
+          community.docker.docker_compose_v2:
+            project_src: "{{ librechat_dir }}"
+            project_name: librechat-eddie
+            pull: missing
+            wait: true
+            wait_timeout: 180
+          when: not ansible_check_mode
+
+        - name: Verify the LibreChat HTTP service from the controller
+          ansible.builtin.uri:
+            url: "{{ librechat_url }}/"
+            use_proxy: false
+            return_content: true
+          delegate_to: localhost
+          register: librechat_http
+          until: librechat_http.status == 200 and 'LibreChat' in librechat_http.content
+          retries: 15
+          delay: 3
+          when: not ansible_check_mode
+
+        - name: Verify the app container can reach Ollama
+          ansible.builtin.command:
+            argv:
+              - docker
+              - compose
+              - --project-name
+              - librechat-eddie
+              - exec
+              - -T
+              - api
+              - node
+              - -e
+              - >-
+                fetch('http://host.docker.internal:11434/v1/models')
+                .then(r => { if (!r.ok) throw Error(r.status); return r.json(); })
+                .then(r => { if (!r.data.some(model => model.id === process.argv[1])) process.exitCode = 1; })
+              - "{{ librechat_model }}"
+            chdir: "{{ librechat_dir }}"
+          changed_when: false
+          when: not ansible_check_mode
