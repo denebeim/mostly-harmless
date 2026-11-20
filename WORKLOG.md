@@ -933,3 +933,45 @@ Placed today's authorship rules, portable handoff and draft-preparation entries
 on the local work-log branch. Recorded frequent local commits by the agent and
 GitHub pushes by the owner, especially for AI handoffs. Preserved the explicit
 review and approval requirement for main integration.
+
+## 2026-11-20 — Eddie LibreChat deployment
+
+Author: OpenAI Codex
+
+Tracked in https://github.com/denebeim/mostly-harmless/issues/18. Prepared the
+standalone Ansible playbook under ai-twiddles/codex/librechat-eddie on
+codex/ai-twiddles-librechat. Live baseline: Eddie resolved to 192.168.42.132
+under both LAN names, port 80 was free, Docker Compose v5.7.1 was available,
+Hermes was up for seven days, and host Ollama 0.40.15 listed qwen3.5:4b.
+MongoDB's AVX prerequisite was present. Eddie had about 20 GiB free before
+image pulls.
+
+The deployment uses the established owner's SSH access to Docker. It puts
+LibreChat and MongoDB in a separate Compose project, publishes only the
+application on Eddie's LAN address at TCP 80, and keeps MongoDB on an internal
+network with persistent volumes. The app reaches host Ollama through Docker's
+host gateway. The VM provisioning playbook, Hermes, and Ollama configuration
+are outside the deployment. Chose a minimal stack for local chat and pinned both
+images by digest. The owner authorized a local LibreChat account. Public
+self-registration is disabled. Deepthot sign-in and TLS are deferred.
+
+Initial Ansible deployment passed with five changes. Importing the LibreChat
+image took about 13 minutes before Compose started the containers. The
+controller fetched the LibreChat page over http://eddie and the app container
+reached Ollama. Created the owner's local account using the upstream account
+tool with a generated password supplied over SSH stdin. The password was
+delivered separately in a private file on Benjymouse.
+
+Signed in over Eddie's port 80 from an SSH session on Eddie. The application
+listed only its Ollama endpoint and qwen3.5:4b. A signed-in chat through
+LibreChat returned a completed answer to a test prompt. Plain HTTP is LAN-only
+by intent. Eddie itself resolves the short host name differently from the
+controller, so authenticated checks on Eddie used its LAN IP directly.
+
+The final digest-pinned playbook is commit 7c49a5c on the experiment branch.
+The first run with both digests pinned applied two changes. The immediate
+repeat reported ok=10, changed=0 and failed=0. The local login still worked
+after the MongoDB container recreated. Final inspection showed healthy MongoDB,
+LibreChat published at 192.168.42.132:80, uninterrupted seven-day Hermes
+uptime, active Ollama, and qwen3.5:4b running at 100% GPU with 65536 context.
+There was no cloud inference. Shell output was captured through chat.log.
