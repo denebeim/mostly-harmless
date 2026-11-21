@@ -1,0 +1,169 @@
+---
+- name: Read host and reservation inventory from hosts.csv
+  ansible.builtin.set_fact:
+    isc_hosts_list: >-
+      {{
+        lookup('ansible.builtin.file', 'hosts.csv').splitlines()[1:]
+        | select('truthy')
+        | map('split', ',')
+        | map('zip', ['name', 'ip', 'mac', 'in_etc_hosts', 'zone_group'])
+        | map('map', 'reverse')
+        | map('community.general.dict')
+        | list
+      }}
+
+- name: Install ISC BIND9 packages
+  ansible.builtin.apt:
+    name:
+      - bind9
+      - bind9utils
+      - dnsutils
+    state: present
+    update_cache: true
+
+- name: Manage low-level system hosts block in /etc/hosts
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} ANSIBLE MANAGED DEEPTHOT SYSTEM HOSTS"
+    block: |
+      {% for item in isc_hosts_list | selectattr('in_etc_hosts', 'equalto', 'true') | list %}
+      {{ item.ip }} {{ item.name }}.{{ bind9_domain_name }} {{ item.name }}
+      {% endfor %}
+
+- name: Deploy BIND9 named.conf.local
+  ansible.builtin.template:
+    src: named.conf.local.j2
+    dest: /etc/bind/named.conf.local
+    owner: root
+    group: bind
+    mode: "0640"
+  notify: Reload bind9
+
+- name: Deploy initial BIND9 forward and reverse zone files (preserve DDNS journals)
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: bind
+    group: bind
+    mode: "0644"
+    force: false
+  loop:
+    - { src: db.local.deepthot.org.j2, dest: /var/lib/bind/db.local.deepthot.org }
+    - { src: db.192.168.42.j2, dest: /var/lib/bind/db.192.168.42 }
+    - { src: db.192.168.43.j2, dest: /var/lib/bind/db.192.168.43 }
+  notify: Reload bind9
+
+- name: Validate BIND9 configuration
+  ansible.builtin.command: named-checkconf
+  changed_when: false
+
+- name: Gather service facts before optional Pi-hole cutover
+  ansible.builtin.service_facts:
+  when: bind9_cutover_pihole | bool
+
+- name: Stop and disable Pi-hole FTL during authorized cutover
+  ansible.builtin.systemd:
+    name: pihole-FTL
+    enabled: false
+    state: stopped
+  when:
+    - bind9_cutover_pihole | bool
+    - "'pihole-FTL.service' in ansible_facts.services"
+
+- name: Enable and start bind9
+  ansible.builtin.systemd:
+    name: bind9
+    enabled: true
+    state: started
+  when: bind9_cutover_pihole | bool
+
+- name: Check for previously managed hosts state file
+  ansible.builtin.stat:
+    path: /var/lib/bind/managed-hosts.csv
+  register: bind9_prev_hosts_stat
+  when: bind9_cutover_pihole | bool
+
+- name: Read previously managed hosts from state file
+  ansible.builtin.slurp:
+    src: /var/lib/bind/managed-hosts.csv
+  register: bind9_prev_hosts_slurp
+  when:
+    - bind9_cutover_pihole | bool
+    - bind9_prev_hosts_stat.stat.exists
+
+- name: Remove obsolete static A records no longer in hosts.csv
+  ansible.builtin.shell: |
+    nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
+    server 127.0.0.1
+    zone {{ bind9_domain_name }}.
+    update delete {{ item.name }}.{{ bind9_domain_name }}. A
+    send
+    EOF
+  loop: >-
+    {{
+      (bind9_prev_hosts_slurp.content | b64decode).splitlines()[1:]
+      | select('truthy')
+      | map('split', ',')
+      | map('zip', ['name', 'ip', 'mac', 'in_etc_hosts', 'zone_group'])
+      | map('map', 'reverse')
+      | map('community.general.dict')
+      | rejectattr('name', 'in', isc_hosts_list | map(attribute='name') | list)
+      | list
+    }}
+  when:
+    - bind9_cutover_pihole | bool
+    - bind9_prev_hosts_stat.stat.exists
+  no_log: true
+  changed_when: false
+
+- name: Remove obsolete static PTR records for removed or renumbered IPs
+  ansible.builtin.shell: |
+    nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
+    server 127.0.0.1
+    zone {{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa.
+    update delete {{ item.ip.split('.')[3] }}.{{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa. PTR
+    send
+    EOF
+  loop: >-
+    {{
+      (bind9_prev_hosts_slurp.content | b64decode).splitlines()[1:]
+      | select('truthy')
+      | map('split', ',')
+      | map('zip', ['name', 'ip', 'mac', 'in_etc_hosts', 'zone_group'])
+      | map('map', 'reverse')
+      | map('community.general.dict')
+      | rejectattr('ip', 'in', isc_hosts_list | map(attribute='ip') | list)
+      | list
+    }}
+  when:
+    - bind9_cutover_pihole | bool
+    - bind9_prev_hosts_stat.stat.exists
+  no_log: true
+  changed_when: false
+
+- name: Reconcile static hosts.csv A and PTR records via TSIG-authenticated nsupdate
+  ansible.builtin.shell: |
+    nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
+    server 127.0.0.1
+    zone {{ bind9_domain_name }}.
+    update delete {{ item.name }}.{{ bind9_domain_name }}. A
+    update add {{ item.name }}.{{ bind9_domain_name }}. 300 A {{ item.ip }}
+    send
+    zone {{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa.
+    update delete {{ item.ip.split('.')[3] }}.{{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa. PTR
+    update add {{ item.ip.split('.')[3] }}.{{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa. 300 PTR {{ item.name }}.{{ bind9_domain_name }}.
+    send
+    EOF
+  loop: "{{ isc_hosts_list }}"
+  when: bind9_cutover_pihole | bool
+  no_log: true
+  changed_when: false
+
+- name: Save current hosts.csv as managed state for future cleanup
+  ansible.builtin.copy:
+    src: hosts.csv
+    dest: /var/lib/bind/managed-hosts.csv
+    owner: bind
+    group: bind
+    mode: "0644"
+  when: bind9_cutover_pihole | bool

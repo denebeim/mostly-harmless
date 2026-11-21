@@ -1,0 +1,43 @@
+---
+- name: Install ISC Kea DHCPv4 and DDNS packages
+  ansible.builtin.apt:
+    name:
+      - kea-dhcp4-server
+      - kea-dhcp-ddns-server
+    state: present
+    update_cache: true
+
+- name: Deploy Kea DHCPv4 configuration with MAC classification
+  ansible.builtin.template:
+    src: kea-dhcp4.conf.j2
+    dest: /etc/kea/kea-dhcp4.conf
+    owner: root
+    group: _kea
+    mode: "0640"
+  notify: Restart kea-dhcp4-server
+
+- name: Deploy Kea DHCP-DDNS configuration
+  ansible.builtin.template:
+    src: kea-dhcp-ddns.conf.j2
+    dest: /etc/kea/kea-dhcp-ddns.conf
+    owner: root
+    group: _kea
+    mode: "0640"
+  notify: Restart kea-dhcp-ddns-server
+
+- name: Validate Kea configurations
+  ansible.builtin.command: "{{ item }}"
+  changed_when: false
+  loop:
+    - kea-dhcp4 -t /etc/kea/kea-dhcp4.conf
+    - kea-dhcp-ddns -t /etc/kea/kea-dhcp-ddns.conf
+
+- name: Enable and start Kea services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - kea-dhcp4-server
+    - kea-dhcp-ddns-server
+  when: kea_cutover_pihole | bool
