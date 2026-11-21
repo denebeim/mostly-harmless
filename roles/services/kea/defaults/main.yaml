@@ -12,3 +12,4 @@ kea_iot_router: 192.168.43.1
 kea_iot_pool: "192.168.43.100 - 192.168.43.250"
 kea_ddns_key_name: kea-ddns-key
 kea_ddns_key_secret: "{{ lookup('ansible.builtin.env', 'KEA_DDNS_KEY_SECRET', errors='strict') }}"
+kea_cutover_pihole: false

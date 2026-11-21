@@ -40,3 +40,4 @@
   loop:
     - kea-dhcp4-server
     - kea-dhcp-ddns-server
+  when: kea_cutover_pihole | bool

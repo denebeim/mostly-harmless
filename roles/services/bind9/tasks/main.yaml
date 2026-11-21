@@ -57,19 +57,25 @@
   ansible.builtin.command: named-checkconf
   changed_when: false
 
+- name: Gather service facts before optional Pi-hole cutover
+  ansible.builtin.service_facts:
+  when: bind9_cutover_pihole | bool
+
 - name: Stop and disable Pi-hole FTL during authorized cutover
   ansible.builtin.systemd:
     name: pihole-FTL
     enabled: false
     state: stopped
-  when: bind9_cutover_pihole | bool
-  failed_when: false
+  when:
+    - bind9_cutover_pihole | bool
+    - "'pihole-FTL.service' in ansible_facts.services"
 
 - name: Enable and start bind9
   ansible.builtin.systemd:
     name: bind9
     enabled: true
     state: started
+  when: bind9_cutover_pihole | bool
 
 - name: Reconcile static hosts.csv A and PTR records via TSIG-authenticated nsupdate
   ansible.builtin.shell: |
@@ -79,7 +85,12 @@
     update delete {{ item.name }}.{{ bind9_domain_name }}. A
     update add {{ item.name }}.{{ bind9_domain_name }}. 300 A {{ item.ip }}
     send
+    zone {{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa.
+    update delete {{ item.ip.split('.')[3] }}.{{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa. PTR
+    update add {{ item.ip.split('.')[3] }}.{{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa. 300 PTR {{ item.name }}.{{ bind9_domain_name }}.
+    send
     EOF
   loop: "{{ isc_hosts_list }}"
+  when: bind9_cutover_pihole | bool
   no_log: true
   changed_when: false
