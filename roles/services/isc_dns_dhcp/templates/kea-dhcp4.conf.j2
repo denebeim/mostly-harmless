@@ -51,7 +51,7 @@
           { "name": "domain-search", "data": "{{ domain_name }}" }
         ],
         "reservations": [
-{% for h in isc_hosts_list | selectattr('mac', 'truthy') | list %}
+{% for h in isc_hosts_list | selectattr('mac', 'truthy') | selectattr('ip', 'match', '^192\\.168\\.42\\.') | list %}
           { "hw-address": "{{ h.mac }}", "ip-address": "{{ h.ip }}", "hostname": "{{ h.name }}" }{{ "," if not loop.last else "" }}
 {% endfor %}
         ]
@@ -68,7 +68,13 @@
         "option-data": [
           { "name": "routers", "data": "192.168.43.1" },
           { "name": "domain-name-servers", "data": "192.168.42.2" },
-          { "name": "domain-name", "data": "iot.{{ domain_name }}" }
+          { "name": "domain-name", "data": "{{ domain_name }}" },
+          { "name": "domain-search", "data": "{{ domain_name }}" }
+        ],
+        "reservations": [
+{% for h in isc_hosts_list | selectattr('mac', 'truthy') | selectattr('ip', 'match', '^192\\.168\\.43\\.') | list %}
+          { "hw-address": "{{ h.mac }}", "ip-address": "{{ h.ip }}", "hostname": "{{ h.name }}" }{{ "," if not loop.last else "" }}
+{% endfor %}
         ]
       }
     ]

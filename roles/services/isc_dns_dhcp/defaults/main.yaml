@@ -3,7 +3,7 @@ domain_name: local.deepthot.org
 lan_subnet: 192.168.42.0/24
 iot_subnet: 192.168.43.0/24
 ddns_key_name: kea-ddns-key
-ddns_key_secret: "{{ lookup('ansible.builtin.env', 'KEA_DDNS_KEY_SECRET') | default('dGVzdHNlcnZpY2VzLWRkbnMta2V5LXBsYWNlaG9sZGVyCg==', true) }}"
+ddns_key_secret: "{{ lookup('ansible.builtin.env', 'KEA_DDNS_KEY_SECRET', errors='strict') }}"
 low_level_hosts:
   - { name: router, ip: 192.168.42.1 }
   - { name: services, ip: 192.168.42.2 }

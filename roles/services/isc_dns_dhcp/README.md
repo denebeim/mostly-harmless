@@ -1,6 +1,6 @@
 # ISC DNS & DHCP (`isc_dns_dhcp`)
 
-This role and [`testservices.yaml`](../../../testservices.yaml) deploy **ISC BIND9** (authoritative DNS), **ISC Kea DHCPv4** (DHCP server with MAC-based client classification), and **ISC Kea DHCP-DDNS** (dynamic DNS updates) on an Ubuntu VM.
+This role and [`services.yaml`](../../../services.yaml) deploy **ISC BIND9** (authoritative DNS), **ISC Kea DHCPv4** (DHCP server with MAC-based client classification), and **ISC Kea DHCP-DDNS** (dynamic DNS updates) on an Ubuntu VM.
 
 ## Where Data Lives (Edit Before Running)
 
@@ -26,12 +26,12 @@ This role and [`testservices.yaml`](../../../testservices.yaml) deploy **ISC BIN
 
 1. **Check syntax first (safe, makes no changes):**
    ```sh
-   ansible-playbook --syntax-check testservices.yaml
+   ansible-playbook --syntax-check services.yaml
    ```
 
-2. **Deploy `testservices` (creates the VM if absent, enrolls in IPA, and installs BIND9 + Kea):**
+2. **Deploy `services` (creates/converges the VM, enrolls in IPA, and installs BIND9 + Kea):**
    ```sh
-   PYTHONUNBUFFERED=1 ansible-playbook testservices.yaml --ssh-common-args="-F /dev/null"
+   PYTHONUNBUFFERED=1 ansible-playbook services.yaml --ssh-common-args="-F /dev/null"
    ```
 
 ## How It Organizes IPs & MAC Filtering

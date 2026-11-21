@@ -22,13 +22,14 @@
     state: present
     update_cache: true
 
-- name: Ensure low-level system hosts are present in /etc/hosts
-  ansible.builtin.lineinfile:
+- name: Manage low-level system hosts block in /etc/hosts
+  ansible.builtin.blockinfile:
     path: /etc/hosts
-    regexp: "^{{ item.ip | regex_escape }}\\s+"
-    line: "{{ item.ip }} {{ item.name }}.{{ domain_name }} {{ item.name }}"
-    state: present
-  loop: "{{ isc_hosts_list | selectattr('in_etc_hosts', 'equalto', 'true') | list }}"
+    marker: "# {mark} ANSIBLE MANAGED DEEPTHOT SYSTEM HOSTS"
+    block: |
+      {% for item in isc_hosts_list | selectattr('in_etc_hosts', 'equalto', 'true') | list %}
+      {{ item.ip }} {{ item.name }}.{{ domain_name }} {{ item.name }}
+      {% endfor %}
 
 - name: Deploy BIND9 named.conf.local
   ansible.builtin.template:
