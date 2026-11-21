@@ -977,3 +977,4 @@ Author: Zoo
 - Verified on `testservices`: `named-checkconf`, `kea-dhcp4 -t`, and `kea-dhcp-ddns -t` passed; `bind9`, `kea-dhcp4-server`, and `kea-dhcp-ddns-server` are active and enabled (`ok=10 changed=2 failed=0`).
 - Note for future IP renumbering: `valheim` (`.123`) is a game server and belongs in the **Applications** group; `plex` (`.186`) and `arr` (`.131`) belong in their own **Media** group. Both are currently up and should be moved when we get to them.
 - Next: review reverse zone files (`db.192.168.42`, `db.192.168.43`), inventory `/etc/pihole/dhcp.leases` on `services` (via `ansible` credentials), and refine actual IoT/user MAC OUI lists.
+- Future project note (owner direction): IoT sandboxing needs to be fleshed out in Future Projects—most IoT devices are on Wi-Fi, while Zigbee/Philips Hue can be isolated more easily; deferred for later engineering.
