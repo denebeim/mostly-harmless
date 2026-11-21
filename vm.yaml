@@ -13,3 +13,5 @@
       when: "'tag_ollama' in group_names"
     - role: hermes
       when: "'tag_hermes' in group_names"
+    - role: services/isc_dns_dhcp
+      when: "'tag_dns' in group_names or 'tag_dhcp' in group_names"

@@ -1,0 +1,15 @@
+---
+- name: Reload bind9
+  ansible.builtin.systemd:
+    name: bind9
+    state: reloaded
+
+- name: Restart kea-dhcp4-server
+  ansible.builtin.systemd:
+    name: kea-dhcp4-server
+    state: restarted
+
+- name: Restart kea-dhcp-ddns-server
+  ansible.builtin.systemd:
+    name: kea-dhcp-ddns-server
+    state: restarted

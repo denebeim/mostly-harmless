@@ -1,0 +1,22 @@
+key "{{ ddns_key_name }}" {
+    algorithm hmac-sha256;
+    secret "{{ ddns_key_secret }}";
+};
+
+zone "{{ domain_name }}" {
+    type primary;
+    file "/var/lib/bind/db.local.deepthot.org";
+    allow-update { key "{{ ddns_key_name }}"; };
+};
+
+zone "42.168.192.in-addr.arpa" {
+    type primary;
+    file "/var/lib/bind/db.192.168.42";
+    allow-update { key "{{ ddns_key_name }}"; };
+};
+
+zone "43.168.192.in-addr.arpa" {
+    type primary;
+    file "/var/lib/bind/db.192.168.43";
+    allow-update { key "{{ ddns_key_name }}"; };
+};

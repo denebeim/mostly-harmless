@@ -1,0 +1,18 @@
+---
+domain_name: local.deepthot.org
+lan_subnet: 192.168.42.0/24
+iot_subnet: 192.168.43.0/24
+ddns_key_name: kea-ddns-key
+ddns_key_secret: "{{ lookup('ansible.builtin.env', 'KEA_DDNS_KEY_SECRET') | default('dGVzdHNlcnZpY2VzLWRkbnMta2V5LXBsYWNlaG9sZGVyCg==', true) }}"
+low_level_hosts:
+  - { name: router, ip: 192.168.42.1 }
+  - { name: services, ip: 192.168.42.2 }
+  - { name: heartogold, ip: 192.168.42.3 }
+  - { name: ipa, ip: 192.168.42.4 }
+  - { name: pve, ip: 192.168.42.5 }
+  - { name: printer, ip: 192.168.42.6 }
+  - { name: h2gt2g, ip: 192.168.42.7 }
+  - { name: auth, ip: 192.168.42.8 }
+  - { name: dmz, ip: 192.168.42.15 }
+  - { name: mailcow, ip: 192.168.42.16 }
+  - { name: k8s-cont1, ip: 192.168.42.21 }
