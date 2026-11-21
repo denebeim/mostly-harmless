@@ -77,6 +77,48 @@
     state: started
   when: bind9_cutover_pihole | bool
 
+- name: Check for previously managed hosts state file
+  ansible.builtin.stat:
+    path: /var/lib/bind/managed-hosts.csv
+  register: bind9_prev_hosts_stat
+  when: bind9_cutover_pihole | bool
+
+- name: Read previously managed hosts from state file
+  ansible.builtin.slurp:
+    src: /var/lib/bind/managed-hosts.csv
+  register: bind9_prev_hosts_slurp
+  when:
+    - bind9_cutover_pihole | bool
+    - bind9_prev_hosts_stat.stat.exists
+
+- name: Remove obsolete static A and PTR records no longer in hosts.csv
+  ansible.builtin.shell: |
+    nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
+    server 127.0.0.1
+    zone {{ bind9_domain_name }}.
+    update delete {{ item.name }}.{{ bind9_domain_name }}. A
+    send
+    zone {{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa.
+    update delete {{ item.ip.split('.')[3] }}.{{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa. PTR
+    send
+    EOF
+  loop: >-
+    {{
+      (bind9_prev_hosts_slurp.content | b64decode).splitlines()[1:]
+      | select('truthy')
+      | map('split', ',')
+      | map('zip', ['name', 'ip', 'mac', 'in_etc_hosts', 'zone_group'])
+      | map('map', 'reverse')
+      | map('community.general.dict')
+      | rejectattr('name', 'in', isc_hosts_list | map(attribute='name') | list)
+      | list
+    }}
+  when:
+    - bind9_cutover_pihole | bool
+    - bind9_prev_hosts_stat.stat.exists
+  no_log: true
+  changed_when: false
+
 - name: Reconcile static hosts.csv A and PTR records via TSIG-authenticated nsupdate
   ansible.builtin.shell: |
     nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
@@ -94,3 +136,12 @@
   when: bind9_cutover_pihole | bool
   no_log: true
   changed_when: false
+
+- name: Save current hosts.csv as managed state for future cleanup
+  ansible.builtin.copy:
+    src: hosts.csv
+    dest: /var/lib/bind/managed-hosts.csv
+    owner: bind
+    group: bind
+    mode: "0644"
+  when: bind9_cutover_pihole | bool
