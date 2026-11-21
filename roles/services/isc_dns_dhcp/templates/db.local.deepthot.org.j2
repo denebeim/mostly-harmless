@@ -8,6 +8,6 @@ $TTL 300
 ;
 @   IN  NS  services.{{ domain_name }}.
 
-{% for h in low_level_hosts %}
+{% for h in isc_hosts_list %}
 {{ h.name }}    IN  A   {{ h.ip }}
 {% endfor %}

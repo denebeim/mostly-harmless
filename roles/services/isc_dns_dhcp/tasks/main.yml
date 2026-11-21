@@ -1,4 +1,17 @@
 ---
+- name: Read host and reservation inventory from hosts.csv
+  ansible.builtin.set_fact:
+    isc_hosts_list: >-
+      {{
+        lookup('ansible.builtin.file', 'hosts.csv').splitlines()[1:]
+        | select('truthy')
+        | map('split', ',')
+        | map('zip', ['name', 'ip', 'mac', 'in_etc_hosts', 'zone_group'])
+        | map('map', 'reverse')
+        | map('community.general.dict')
+        | list
+      }}
+
 - name: Install ISC BIND9 and Kea DHCP packages
   ansible.builtin.apt:
     name:
@@ -15,7 +28,7 @@
     regexp: "^{{ item.ip | regex_escape }}\\s+"
     line: "{{ item.ip }} {{ item.name }}.{{ domain_name }} {{ item.name }}"
     state: present
-  loop: "{{ low_level_hosts }}"
+  loop: "{{ isc_hosts_list | selectattr('in_etc_hosts', 'equalto', 'true') | list }}"
 
 - name: Deploy BIND9 named.conf.local
   ansible.builtin.template:

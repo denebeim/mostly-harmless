@@ -1,0 +1,16 @@
+name,ip,mac,in_etc_hosts,zone_group
+router,192.168.42.1,48:a9:8a:19:79:f4,true,system
+services,192.168.42.2,,true,system
+heartogold,192.168.42.3,ac:1f:6b:48:87:02,true,system
+ipa,192.168.42.4,bc:24:11:68:0b:27,true,system
+pve,192.168.42.5,ec:8e:b5:d7:81:13,true,system
+printer,192.168.42.6,00:80:87:b2:1a:af,true,system
+h2gt2g,192.168.42.7,00:11:32:8f:27:07,true,system
+auth,192.168.42.8,bc:24:11:b7:97:5e,true,system
+dmz,192.168.42.15,bc:24:11:f5:bd:16,true,system
+mailcow,192.168.42.16,bc:24:11:e4:fb:c6,true,system
+k8s-cont1,192.168.42.21,bc:24:11:d5:9f:45,true,system
+giles,192.168.42.98,9c:6b:00:3a:3d:dc,false,user
+willow,192.168.42.99,d8:43:ae:c3:14:28,false,user
+freenas,192.168.42.115,bc:24:11:87:3f:b5,false,infra
+eddie,192.168.42.132,bc:24:11:47:69:b9,false,app

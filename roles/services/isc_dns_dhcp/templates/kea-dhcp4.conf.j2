@@ -51,20 +51,9 @@
           { "name": "domain-search", "data": "{{ domain_name }}" }
         ],
         "reservations": [
-          { "hw-address": "48:a9:8a:19:79:f4", "ip-address": "192.168.42.1", "hostname": "router" },
-          { "hw-address": "ac:1f:6b:48:87:02", "ip-address": "192.168.42.3", "hostname": "heartogold" },
-          { "hw-address": "bc:24:11:68:0b:27", "ip-address": "192.168.42.4", "hostname": "ipa" },
-          { "hw-address": "ec:8e:b5:d7:81:13", "ip-address": "192.168.42.5", "hostname": "pve" },
-          { "hw-address": "00:80:87:b2:1a:af", "ip-address": "192.168.42.6", "hostname": "printer" },
-          { "hw-address": "00:11:32:8f:27:07", "ip-address": "192.168.42.7", "hostname": "h2gt2g" },
-          { "hw-address": "bc:24:11:b7:97:5e", "ip-address": "192.168.42.8", "hostname": "auth" },
-          { "hw-address": "bc:24:11:f5:bd:16", "ip-address": "192.168.42.15", "hostname": "dmz" },
-          { "hw-address": "bc:24:11:e4:fb:c6", "ip-address": "192.168.42.16", "hostname": "mailcow" },
-          { "hw-address": "bc:24:11:d5:9f:45", "ip-address": "192.168.42.21", "hostname": "k8s-cont1" },
-          { "hw-address": "9c:6b:00:3a:3d:dc", "ip-address": "192.168.42.98", "hostname": "giles" },
-          { "hw-address": "d8:43:ae:c3:14:28", "ip-address": "192.168.42.99", "hostname": "willow" },
-          { "hw-address": "bc:24:11:87:3f:b5", "ip-address": "192.168.42.115", "hostname": "freenas" },
-          { "hw-address": "bc:24:11:47:69:b9", "ip-address": "192.168.42.132", "hostname": "eddie" }
+{% for h in isc_hosts_list | selectattr('mac', 'truthy') | list %}
+          { "hw-address": "{{ h.mac }}", "ip-address": "{{ h.ip }}", "hostname": "{{ h.name }}" }{{ "," if not loop.last else "" }}
+{% endfor %}
         ]
       },
       {

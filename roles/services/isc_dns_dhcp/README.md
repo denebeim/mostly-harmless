@@ -2,6 +2,13 @@
 
 This role and [`testservices.yaml`](../../../testservices.yaml) deploy **ISC BIND9** (authoritative DNS), **ISC Kea DHCPv4** (DHCP server with MAC-based client classification), and **ISC Kea DHCP-DDNS** (dynamic DNS updates) on an Ubuntu VM.
 
+## Where Data Lives (Edit Before Running)
+
+- **Host & DHCP Reservations:** [`files/hosts.csv`](files/hosts.csv)
+  - Columns: `name,ip,mac,in_etc_hosts,zone_group`
+  - Add or update rows here before running the playbook. Any row with a `mac` gets a static Kea DHCP reservation; any row with `in_etc_hosts=true` is written to `/etc/hosts`; all rows are added to BIND9 DNS.
+- **Role Defaults:** [`defaults/main.yml`](defaults/main.yml) (domain name, subnet CIDRs, and `KEA_DDNS_KEY_SECRET` lookup).
+
 ## Prerequisites
 
 1. **Controller Python environment & `direnv`:**
