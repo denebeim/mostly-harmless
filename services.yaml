@@ -1,0 +1,12 @@
+---
+- ansible.builtin.import_playbook: vm.yaml
+  vars:
+    vm:
+      name: services
+      id: 202
+      ip: 192.168.42.2
+      memory: 2048
+      cores: 2
+      disk: 16G
+      update_packages: false
+      tags: [ipa, dns, dhcp]
