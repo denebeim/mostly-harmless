@@ -980,3 +980,23 @@ Author: Zoo
 - Future project note (owner direction): IoT sandboxing needs to be fleshed out in Future Projects—most IoT devices are on Wi-Fi, while Zigbee/Philips Hue can be isolated more easily; deferred for later engineering.
 - Architecture & PR #20 review (2026-11-21, `Author: Zoo`): Split `roles/services/isc_dns_dhcp` into `roles/services/bind9` and `roles/services/kea`, declared explicitly in `services.yaml` (`tags: []`, no IPA/DNS/DHCP bootstrap dependency). Gated `bind9` and `kea` service startup on `bind9_cutover_pihole` / `kea_cutover_pihole` (default `false`), added `PTR` reconciliation to `nsupdate`, and replaced `failed_when: false` on `pihole-FTL` stop with `service_facts` check.
 - IPA DNS note (2026-11-21, `Author: Zoo`): `services` (`192.168.42.2`) currently serves `_kerberos._tcp.local.deepthot.org` SRV records while `ipa` (`192.168.42.4`) is not serving DNS externally. Owner direction: `services` (BIND9) should be the primary DNS node and `ipa` the secondary (with FreeIPA SRV records served by `services` and optional AXFR to `ipa`), to be addressed when we get to the IPA automation.
+
+## 2026-11-21 — Prepare Eddie for Authentik sign-in
+
+Author: OpenAI Codex
+
+Added opt-in OpenID Connect to the isolated Eddie LibreChat playbook
+(commit e87d9aa). It uses the existing auth.deepthot.org Authentik instance,
+keeps OIDC secrets in a private environment file sourced from vaulted
+variables, and moves LibreChat to a loopback Docker listener behind an
+Eddie HTTPS proxy when enabled. Authentik controls application access and
+MFA. Local admin login remains available, and ordinary self-registration is
+disabled. Documented the callback, provider settings, tests and rollback.
+
+Ansible syntax and both rendered Compose modes passed with dummy values.
+A dry run on Eddie with OIDC disabled reported changed=0 and failed=0.
+Eddie's proposed HTTPS endpoint refused connections and Authentik returned
+404 for the proposed eddie discovery URL. The publicly presented Let's
+Encrypt certificate covers *.local.deepthot.org. A TLS route for Eddie,
+an Authentik application/provider and secure credentials still need
+configuration before an end-to-end sign-in test. No live change was made.
