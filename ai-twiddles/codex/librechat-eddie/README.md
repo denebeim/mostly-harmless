@@ -35,7 +35,49 @@ LibreChat requires an account. This instance allows local passwords and disables
 self-registration and social login. Provision the first account with LibreChat's
 create-user tool through SSH and supply a unique password via stdin. The first
 account is the instance admin. The plain HTTP URL is for the trusted LAN and
-offers no transport encryption. Deepthot sign-in and TLS are future work.
+offers no transport encryption. Keep local passwords separate from directory
+credentials.
+
+## Optional Authentik sign-in
+
+OpenID Connect is disabled by default. To enable it on rebuilt Eddie:
+
+1. Set up a trusted LAN HTTPS URL for LibreChat, such as
+   `https://eddie.local.deepthot.org`. An HTTPS reverse proxy on Eddie should
+   forward to `http://127.0.0.1:3080`, preserving the host and forwarding
+   protocol headers and chat streaming. Enabling this mode moves the Docker
+   listener from Eddie's LAN port 80 to localhost port 3080.
+2. In Authentik at `https://auth.deepthot.org`, create an Eddie application
+   with a confidential OAuth2/OpenID Connect provider. Register the exact
+   redirect URI, for example
+   `https://eddie.local.deepthot.org/oauth/openid/callback`. Grant the
+   application to the household group or explicitly selected users.
+3. Pass the following variables in an Ansible Vault-encrypted extra-vars file
+   using `--extra-vars @/path/to/eddie-auth.vault.yml --ask-vault-pass`.
+   Generate a distinct, persistent random session secret of at least 32
+   characters. Copy the discovery URL from the provider page.
+
+   ```yaml
+   librechat_oidc_enabled: true
+   librechat_url: https://eddie.local.deepthot.org
+   librechat_oidc_discovery_url: https://auth.deepthot.org/application/o/eddie/.well-known/openid-configuration
+   librechat_oidc_client_id: REPLACE_WITH_CLIENT_ID
+   librechat_oidc_client_secret: REPLACE_WITH_CLIENT_SECRET
+   librechat_oidc_session_secret: REPLACE_WITH_RANDOM_SESSION_SECRET
+   librechat_oidc_allow_registration: true
+   ```
+
+   Set `librechat_oidc_allow_registration` only after restricting Eddie in
+   Authentik. It permits account creation on first successful Authentik login.
+   Regular LibreChat self-registration stays disabled, and local sign-in is
+   available for the administrator.
+4. In fresh browser sessions, verify a household user can sign in and chat,
+   an Authentik user outside the Eddie policy is denied, and the local admin
+   can still sign in. Authentik owns the two-factor and FreeIPA policy.
+
+To return to the original local-only pilot, rerun without the OIDC extra-vars
+file. The old LAN HTTP listener returns, the managed OIDC environment file is
+removed after Compose converges, and the database is retained.
 
 From the project directory on Eddie, use
 `docker compose --project-name librechat-eddie stop` to stop the two services.

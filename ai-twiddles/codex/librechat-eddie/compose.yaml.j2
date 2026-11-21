@@ -3,8 +3,16 @@ services:
     image: "{{ librechat_image }}"
     restart: unless-stopped
     ports:
+{% if librechat_oidc_enabled | bool %}
+      - "127.0.0.1:3080:3080"
+    env_file:
+      - .env
+      - path: oidc.env
+        format: raw
+{% else %}
       - "{{ librechat_ip }}:80:3080"
     env_file: .env
+{% endif %}
     environment:
       HOST: 0.0.0.0
       PORT: "3080"
@@ -15,8 +23,8 @@ services:
       SEARCH: "false"
       ALLOW_EMAIL_LOGIN: "true"
       ALLOW_REGISTRATION: "false"
-      ALLOW_SOCIAL_LOGIN: "false"
-      ALLOW_SOCIAL_REGISTRATION: "false"
+      ALLOW_SOCIAL_LOGIN: "{{ (librechat_oidc_enabled | bool) | ternary('true', 'false') }}"
+      ALLOW_SOCIAL_REGISTRATION: "{{ ((librechat_oidc_enabled | bool) and (librechat_oidc_allow_registration | bool)) | ternary('true', 'false') }}"
     labels:
       org.deepthot.librechat.config-sha1: "{{ librechat_config.checksum }}"
     extra_hosts:

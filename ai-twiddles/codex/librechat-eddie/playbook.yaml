@@ -5,6 +5,8 @@
   vars:
     librechat_ip: 192.168.42.132
     librechat_url: http://eddie
+    librechat_oidc_enabled: false
+    librechat_oidc_allow_registration: false
     librechat_image: ghcr.io/librechat-ai/librechat:v0.8.9@sha256:51550d041e298f0740d98743a3ffdeac9be4cf6dcb1bcd938e6db8779c420fc4
     librechat_mongo_image: mongo:8.0.20@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef
     librechat_model: "qwen3.5:4b"
@@ -29,6 +31,35 @@
       register: librechat_ollama
       failed_when: librechat_model not in (librechat_ollama.json.models | map(attribute='name') | list)
       check_mode: false
+
+    - name: Validate OpenID Connect deployment inputs
+      ansible.builtin.assert:
+        that:
+          - librechat_url is match('^https://[^/]+$')
+          - (librechat_oidc_discovery_url | default('')) is match('^https://auth[.]deepthot[.]org/.+')
+          - (librechat_oidc_client_id | default('')) | length > 0
+          - (librechat_oidc_client_secret | default('')) | length > 0
+          - (librechat_oidc_session_secret | default('')) | length >= 32
+          - not ((librechat_oidc_client_id | default('')) is search('[\r\n]'))
+          - not ((librechat_oidc_client_secret | default('')) is search('[\r\n]'))
+          - not ((librechat_oidc_session_secret | default('')) is search('[\r\n]'))
+        fail_msg: Supply an HTTPS Eddie URL, Authentik discovery URL, and valid OpenID Connect credentials.
+      no_log: true
+      when: librechat_oidc_enabled | bool
+
+    - name: Verify Authentik discovery from Eddie
+      ansible.builtin.uri:
+        url: "{{ librechat_oidc_discovery_url }}"
+        use_proxy: false
+        follow_redirects: none
+      register: librechat_oidc_discovery
+      failed_when: >-
+        librechat_oidc_discovery.status != 200 or
+        not (librechat_oidc_discovery.json.issuer | default('') is match('^https://auth[.]deepthot[.]org/')) or
+        not (librechat_oidc_discovery.json.authorization_endpoint | default('') is match('^https://auth[.]deepthot[.]org/')) or
+        not (librechat_oidc_discovery.json.token_endpoint | default('') is match('^https://auth[.]deepthot[.]org/'))
+      check_mode: false
+      when: librechat_oidc_enabled | bool
 
     - name: Manage the Eddie LibreChat project
       vars:
@@ -65,6 +96,15 @@
             mode: "0644"
           register: librechat_config
 
+        - name: Write the private OpenID Connect environment
+          ansible.builtin.template:
+            src: oidc.env.j2
+            dest: "{{ librechat_dir }}/oidc.env"
+            mode: "0600"
+          no_log: true
+          diff: false
+          when: librechat_oidc_enabled | bool
+
         - name: Render the isolated Compose project
           ansible.builtin.template:
             src: compose.yaml.j2
@@ -81,7 +121,13 @@
             wait_timeout: 180
           when: not ansible_check_mode
 
-        - name: Verify the LibreChat HTTP service from the controller
+        - name: Remove the managed OpenID Connect environment when disabled
+          ansible.builtin.file:
+            path: "{{ librechat_dir }}/oidc.env"
+            state: absent
+          when: not (librechat_oidc_enabled | bool or ansible_check_mode)
+
+        - name: Verify the LibreChat web service from the controller
           ansible.builtin.uri:
             url: "{{ librechat_url }}/"
             use_proxy: false
