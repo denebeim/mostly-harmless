@@ -1,0 +1,87 @@
+{
+  "Dhcp4": {
+    "interfaces-config": {
+      "interfaces": [ "*" ]
+    },
+    "lease-database": {
+      "type": "memfile",
+      "persist": true,
+      "name": "/var/lib/kea/kea-leases4.csv"
+    },
+    "valid-lifetime": 3600,
+    "renew-timer": 1800,
+    "rebind-timer": 3150,
+    "ddns-send-updates": true,
+    "ddns-qualifying-suffix": "{{ domain_name }}",
+    "dhcp-ddns": {
+      "enable-updates": true
+    },
+    "client-classes": [
+      {
+        "name": "vm_clients",
+        "test": "substring(pkt4.mac, 0, 3) == 0x525400 or substring(pkt4.mac, 0, 3) == 0xbc2411 or substring(pkt4.mac, 0, 3) == 0x00163e"
+      },
+      {
+        "name": "iot_devices",
+        "test": "substring(pkt4.mac, 0, 3) == 0x240ac4 or substring(pkt4.mac, 0, 3) == 0xecfabc"
+      },
+      {
+        "name": "user_machines",
+        "test": "not member('vm_clients') and not member('iot_devices')"
+      }
+    ],
+    "subnet4": [
+      {
+        "id": 1,
+        "subnet": "{{ lan_subnet }}",
+        "pools": [
+          {
+            "pool": "192.168.42.70 - 192.168.42.99",
+            "client-class": "user_machines"
+          },
+          {
+            "pool": "192.168.42.200 - 192.168.42.239",
+            "client-class": "vm_clients"
+          }
+        ],
+        "option-data": [
+          { "name": "routers", "data": "192.168.42.1" },
+          { "name": "domain-name-servers", "data": "192.168.42.2" },
+          { "name": "domain-name", "data": "{{ domain_name }}" },
+          { "name": "domain-search", "data": "{{ domain_name }}" }
+        ],
+        "reservations": [
+          { "hw-address": "48:a9:8a:19:79:f4", "ip-address": "192.168.42.1", "hostname": "router" },
+          { "hw-address": "ac:1f:6b:48:87:02", "ip-address": "192.168.42.3", "hostname": "heartogold" },
+          { "hw-address": "bc:24:11:68:0b:27", "ip-address": "192.168.42.4", "hostname": "ipa" },
+          { "hw-address": "ec:8e:b5:d7:81:13", "ip-address": "192.168.42.5", "hostname": "pve" },
+          { "hw-address": "00:80:87:b2:1a:af", "ip-address": "192.168.42.6", "hostname": "printer" },
+          { "hw-address": "00:11:32:8f:27:07", "ip-address": "192.168.42.7", "hostname": "h2gt2g" },
+          { "hw-address": "bc:24:11:b7:97:5e", "ip-address": "192.168.42.8", "hostname": "auth" },
+          { "hw-address": "bc:24:11:f5:bd:16", "ip-address": "192.168.42.15", "hostname": "dmz" },
+          { "hw-address": "bc:24:11:e4:fb:c6", "ip-address": "192.168.42.16", "hostname": "mailcow" },
+          { "hw-address": "bc:24:11:d5:9f:45", "ip-address": "192.168.42.21", "hostname": "k8s-cont1" },
+          { "hw-address": "9c:6b:00:3a:3d:dc", "ip-address": "192.168.42.98", "hostname": "giles" },
+          { "hw-address": "d8:43:ae:c3:14:28", "ip-address": "192.168.42.99", "hostname": "willow" },
+          { "hw-address": "bc:24:11:87:3f:b5", "ip-address": "192.168.42.115", "hostname": "freenas" },
+          { "hw-address": "bc:24:11:47:69:b9", "ip-address": "192.168.42.132", "hostname": "eddie" }
+        ]
+      },
+      {
+        "id": 2,
+        "subnet": "{{ iot_subnet }}",
+        "pools": [
+          {
+            "pool": "192.168.43.100 - 192.168.43.250",
+            "client-class": "iot_devices"
+          }
+        ],
+        "option-data": [
+          { "name": "routers", "data": "192.168.43.1" },
+          { "name": "domain-name-servers", "data": "192.168.42.2" },
+          { "name": "domain-name", "data": "iot.{{ domain_name }}" }
+        ]
+      }
+    ]
+  }
+}

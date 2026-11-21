@@ -1,0 +1,42 @@
+{
+  "DhcpDdns": {
+    "ip-address": "127.0.0.1",
+    "port": 53001,
+    "tsig-keys": [
+      {
+        "name": "{{ ddns_key_name }}",
+        "algorithm": "HMAC-SHA256",
+        "secret": "{{ ddns_key_secret }}"
+      }
+    ],
+    "forward-ddns": {
+      "ddns-domains": [
+        {
+          "name": "{{ domain_name }}.",
+          "key-name": "{{ ddns_key_name }}",
+          "dns-servers": [
+            { "ip-address": "127.0.0.1", "port": 53 }
+          ]
+        }
+      ]
+    },
+    "reverse-ddns": {
+      "ddns-domains": [
+        {
+          "name": "42.168.192.in-addr.arpa.",
+          "key-name": "{{ ddns_key_name }}",
+          "dns-servers": [
+            { "ip-address": "127.0.0.1", "port": 53 }
+          ]
+        },
+        {
+          "name": "43.168.192.in-addr.arpa.",
+          "key-name": "{{ ddns_key_name }}",
+          "dns-servers": [
+            { "ip-address": "127.0.0.1", "port": 53 }
+          ]
+        }
+      ]
+    }
+  }
+}

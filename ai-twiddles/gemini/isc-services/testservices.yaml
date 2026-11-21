@@ -1,0 +1,12 @@
+---
+- ansible.builtin.import_playbook: ../../../vm.yaml
+  vars:
+    vm:
+      name: testservices
+      id: 8315
+      ip: 192.168.42.202
+      memory: 2048
+      cores: 2
+      disk: 12G
+      update_packages: false
+      tags: [ipa]
