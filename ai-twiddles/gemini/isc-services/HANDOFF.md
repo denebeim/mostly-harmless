@@ -4,10 +4,12 @@
 
 ## Current State & Branches
 - **Twiddle branch:** `gemini/isc-dhcp-dns` (`ai-twiddles/gemini/isc-services/`)
-- **Integration branch (ready for PR):** `gemini/isc-dns-dhcp` (pushed to `origin/gemini/isc-dns-dhcp` at `27490ab`)
+- **GitHub Issue:** #19 (`https://github.com/denebeim/mostly-harmless/issues/19`)
+- **Ticket branch:** `gemini/19-isc-dns-dhcp` (pushed to `origin/gemini/19-isc-dns-dhcp`)
   - Role: `roles/services/isc_dns_dhcp/` (`tasks/main.yaml`, `handlers/main.yaml`, `defaults/main.yaml`, `templates/`, `files/hosts.csv`, `README.md`)
   - Playbooks: `testservices.yaml`, `services.yaml`, `vm.yaml` (gated on `tag_dns` or `tag_dhcp`)
-  - PR URL: https://github.com/denebeim/mostly-harmless/pull/new/gemini/isc-dns-dhcp
+- **Working branch:** `gemini/19-isc-dns-dhcp-work` (pushed to `origin/gemini/19-isc-dns-dhcp-work`)
+- **Pull Request:** #20 (`https://github.com/denebeim/mostly-harmless/pull/20`, `gemini/19-isc-dns-dhcp` -> `gemini/19-isc-dns-dhcp-work`)
 - **Worklog branch:** `work-log` (pushed to `origin/work-log` at `6732541`, signed `Author: Zoo`)
 
 ## Test VM (`testservices`)
