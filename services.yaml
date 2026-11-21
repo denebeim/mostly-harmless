@@ -9,4 +9,12 @@
       cores: 2
       disk: 16G
       update_packages: false
-      tags: [ipa, dns, dhcp]
+      tags: []
+
+- name: Configure foundational DNS and DHCP services on services
+  hosts: services
+  become: true
+  gather_facts: true
+  roles:
+    - role: services/bind9
+    - role: services/kea

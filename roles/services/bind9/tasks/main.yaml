@@ -1,0 +1,85 @@
+---
+- name: Read host and reservation inventory from hosts.csv
+  ansible.builtin.set_fact:
+    isc_hosts_list: >-
+      {{
+        lookup('ansible.builtin.file', 'hosts.csv').splitlines()[1:]
+        | select('truthy')
+        | map('split', ',')
+        | map('zip', ['name', 'ip', 'mac', 'in_etc_hosts', 'zone_group'])
+        | map('map', 'reverse')
+        | map('community.general.dict')
+        | list
+      }}
+
+- name: Install ISC BIND9 packages
+  ansible.builtin.apt:
+    name:
+      - bind9
+      - bind9utils
+      - dnsutils
+    state: present
+    update_cache: true
+
+- name: Manage low-level system hosts block in /etc/hosts
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} ANSIBLE MANAGED DEEPTHOT SYSTEM HOSTS"
+    block: |
+      {% for item in isc_hosts_list | selectattr('in_etc_hosts', 'equalto', 'true') | list %}
+      {{ item.ip }} {{ item.name }}.{{ bind9_domain_name }} {{ item.name }}
+      {% endfor %}
+
+- name: Deploy BIND9 named.conf.local
+  ansible.builtin.template:
+    src: named.conf.local.j2
+    dest: /etc/bind/named.conf.local
+    owner: root
+    group: bind
+    mode: "0640"
+  notify: Reload bind9
+
+- name: Deploy initial BIND9 forward and reverse zone files (preserve DDNS journals)
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: bind
+    group: bind
+    mode: "0644"
+    force: false
+  loop:
+    - { src: db.local.deepthot.org.j2, dest: /var/lib/bind/db.local.deepthot.org }
+    - { src: db.192.168.42.j2, dest: /var/lib/bind/db.192.168.42 }
+    - { src: db.192.168.43.j2, dest: /var/lib/bind/db.192.168.43 }
+  notify: Reload bind9
+
+- name: Validate BIND9 configuration
+  ansible.builtin.command: named-checkconf
+  changed_when: false
+
+- name: Stop and disable Pi-hole FTL during authorized cutover
+  ansible.builtin.systemd:
+    name: pihole-FTL
+    enabled: false
+    state: stopped
+  when: bind9_cutover_pihole | bool
+  failed_when: false
+
+- name: Enable and start bind9
+  ansible.builtin.systemd:
+    name: bind9
+    enabled: true
+    state: started
+
+- name: Reconcile static hosts.csv A and PTR records via TSIG-authenticated nsupdate
+  ansible.builtin.shell: |
+    nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
+    server 127.0.0.1
+    zone {{ bind9_domain_name }}.
+    update delete {{ item.name }}.{{ bind9_domain_name }}. A
+    update add {{ item.name }}.{{ bind9_domain_name }}. 300 A {{ item.ip }}
+    send
+    EOF
+  loop: "{{ isc_hosts_list }}"
+  no_log: true
+  changed_when: false
