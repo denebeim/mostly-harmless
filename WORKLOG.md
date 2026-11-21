@@ -107,6 +107,22 @@ to evolve deliberately.
   now `eddie.yaml`; the existing machine identity and upstream software names are
   preserved. The renamed operational file remains ignored pending privacy review.
 
+### Shared principle: the seeing stone
+
+AI is a seeing stone: it helps the owner examine more, organize ideas and explore possibilities. Its view can be incomplete or misleading, so verify claims and keep uncertainty visible. The owner's judgment, meaning and voice decide what becomes their public authored work. Use this principle with each reusable prompt below; assistance does not replace authorship or make output inherently reliable.
+
+### Reusable prompt: scoped personal experiment (Codex or Gemini)
+
+> Work on this personal experiment: <describe task>. Inspect current repository instructions, the actual remote default branch and existing changes first. Use your own isolated experimental branch and worktree when needed. Codex-owned experiments belong under ai-twiddles/codex/. Preserve Gemini's files, the existing ChatGPT and Gemini mouse setups, and shared logging code. Do not overwrite or relocate another assistant's work. Codex is authorized to work, commit and push its isolated experimental changes autonomously on its branch. Before anything reaches main or a future default branch, report the concrete work, discuss it with me, let me inspect it, and obtain my explicit approval for that reviewed change. Approval of this general workflow is not approval of future integrations. Leave the PR pending and do not enable auto-merge before my approval. Respect normal checks, required reviews and branch protection. This experimental authority does not extend to Gemini-owned files, shared infrastructure or publishing prose in my name. If you are Gemini, preserve the Codex area and follow the scope I give you. Stage exact paths only, run appropriate checks, and report what changed, validation, commit and merge status, and limitations. Stream command stdout/stderr through the established logger into the existing mostly-harmless/chat.log, protect secrets, and record significant developments in WORKLOG.md on the separate work-log branch.
+
+### Reusable prompt: public work in my voice (Codex or Gemini)
+
+> Help me develop <describe publishable work> in my own voice. Start from a ticket that I or the assistant creates, then use a dedicated branch. Work with me on the substance and wording until I say it sounds like me; do not replace that process with generic AI prose. I make the commit. Update WORKLOG.md on the separate work-log branch, then prepare the pull request together. Autonomous permission for isolated experimental branch work does not authorize committing or publishing this authored work for me. Anything reaching main still needs my explicit approval after review. Preserve unrelated changes and other assistants' files, keep commands visible through the existing logger, and keep secrets out of logs and public content.
+
+### Reusable prompt: independent work-log checkpoint (Codex or Gemini)
+
+> Update the existing WORKLOG.md on the separate work-log branch of denebeim/mostly-harmless. Use its own clean checkout, preserve prior entries and other work, and record meaningful results, failures, decisions and pending actions in a concise factual entry. Include only the work-log file in its commit. Do not merge work-log into main or move the work log onto main for convenience. Do not publish raw chat transcripts, credentials, raw chat.log or exact internal addresses. Commit updates locally and often. Leave the GitHub push to the owner, who pushes regularly, especially when handing off to another AI. If a protection or approval check blocks publication, stop that action, preserve the local result and report the reason; do not try another route around it.
+
 ## Active priority: Eddie playbook recovery
 
 The immediate acceptance criterion is a successful run of the existing playbook, now named `eddie.yaml`.
@@ -193,6 +209,18 @@ local playbook changes. Progress is mirrored into an ignored local log so the
 owner can observe runs; full diagnostic output remains private. The overall
 playbook has not yet completed successfully.
 
+## How to maintain this log
+
+At each meaningful work milestone, update:
+- current objective and status;
+- verified findings (with evidence or references where practical);
+- changes actually made and how they were verified;
+- unresolved questions, risks, and dependencies;
+- the next concrete action.
+
+Use dates when known. Do not invent timestamps or imply continuous monitoring. This log is a
+session-maintained record, not an autonomous live feed.
+
 ## Session log
 
 ### 2026-11-07 — Project baseline and Eddie recovery
@@ -277,18 +305,6 @@ playbook has not yet completed successfully.
   complete reproducible public configuration backup.
 - No infrastructure-changing tasks have run. The next gate is review of the
   existing playbook's consequential provisioning and guest configuration effects.
-
-## How to maintain this log
-
-At each meaningful work milestone, update:
-- current objective and status;
-- verified findings (with evidence or references where practical);
-- changes actually made and how they were verified;
-- unresolved questions, risks, and dependencies;
-- the next concrete action.
-
-Use dates when known. Do not invent timestamps or imply continuous monitoring. This log is a
-session-maintained record, not an autonomous live feed.
 
 ### 2026-11-07 — Restore Galaxy IPA dependency
 
@@ -639,11 +655,6 @@ At owner request, exactly one minimal generation at 14:34 Arizona using unchange
 - Owner requests all Python files prettified and future scripts formatted. Extensive formatting must be isolated on its own GitHub ticket branch and in a dedicated formatting-only commit, separate from functional changes. Preserve this as a standing workflow rule.
 - Created issue #11, “Format Python scripts consistently and enforce formatting,” and branch `codex/11-python-formatting` from `main`. No formatting changes made in the active Eddie branch.
 
-### 2026-11-12 — Python formatting rule and ticket
-
-- Owner requests all Python files prettified and future scripts formatted. Extensive formatting must be isolated on its own GitHub ticket branch and in a dedicated formatting-only commit, separate from functional changes. Preserve this as a standing workflow rule.
-- Created issue #11, “Format Python scripts consistently and enforce formatting,” and branch `codex/11-python-formatting` from `main`. No formatting changes made in the active Eddie branch.
-
 ### 2026-11-12 — Fixed Proxmox helper JSON output
 
 - Removed command debug prints from `roles/proxmox/create_vm/files/manage_vm.py`; successful stdout is now solely the JSON result consumed by Ansible. Existing command exceptions still fail the helper with a nonzero exit. Kept this functional fix separate from the Python-formatting issue/branch.
@@ -853,23 +864,7 @@ remote branch/upstream verification is pending.
 
 Owner authorized a Codex-specific `ai-twiddles/codex/` directory, isolated experimental branches, and autonomous scoped commits/merges through normal repository protections. Work intended for publication in the owner's voice follows a separate collaborative process. Owner explicitly requested these reusable prompts be committed and pushed to GitHub on this independent `work-log` branch. This entry is an operating agreement, not a claim that every publication step below has already completed.
 
-### Shared principle: the seeing stone
-
-AI is a seeing stone: it helps the owner examine more, organize ideas and explore possibilities. Its view can be incomplete or misleading, so verify claims and keep uncertainty visible. The owner's judgment, meaning and voice decide what becomes their public authored work. Use this principle with each reusable prompt below; assistance does not replace authorship or make output inherently reliable.
-
-### Reusable prompt: scoped personal experiment (Codex or Gemini)
-
-> Work on this personal experiment: <describe task>. Inspect current repository instructions, the actual remote default branch and existing changes first. Use your own isolated experimental branch and worktree when needed. Codex-owned experiments belong under ai-twiddles/codex/. Preserve Gemini's files, the existing ChatGPT and Gemini mouse setups, and shared logging code. Do not overwrite or relocate another assistant's work. Codex is authorized to work, commit and push its isolated experimental changes autonomously on its branch. Before anything reaches main or a future default branch, report the concrete work, discuss it with me, let me inspect it, and obtain my explicit approval for that reviewed change. Approval of this general workflow is not approval of future integrations. Leave the PR pending and do not enable auto-merge before my approval. Respect normal checks, required reviews and branch protection. This experimental authority does not extend to Gemini-owned files, shared infrastructure or publishing prose in my name. If you are Gemini, preserve the Codex area and follow the scope I give you. Stage exact paths only, run appropriate checks, and report what changed, validation, commit and merge status, and limitations. Stream command stdout/stderr through the established logger into the existing mostly-harmless/chat.log, protect secrets, and record significant developments in WORKLOG.md on the separate work-log branch.
-
-### Reusable prompt: public work in my voice (Codex or Gemini)
-
-> Help me develop <describe publishable work> in my own voice. Start from a ticket that I or the assistant creates, then use a dedicated branch. Work with me on the substance and wording until I say it sounds like me; do not replace that process with generic AI prose. I make the commit. Update WORKLOG.md on the separate work-log branch, then prepare the pull request together. Autonomous permission for isolated experimental branch work does not authorize committing or publishing this authored work for me. Anything reaching main still needs my explicit approval after review. Preserve unrelated changes and other assistants' files, keep commands visible through the existing logger, and keep secrets out of logs and public content.
-
-### Reusable prompt: independent work-log checkpoint (Codex or Gemini)
-
-> Update the existing WORKLOG.md on the separate work-log branch of denebeim/mostly-harmless. Use its own clean checkout, preserve prior entries and other work, and record meaningful results, failures, decisions and pending actions in a concise factual entry. Include only the work-log file in its commit. Do not merge work-log into main or move the work log onto main for convenience. Do not publish raw chat transcripts, credentials, raw chat.log or exact internal addresses. Commit updates locally and often. Leave the GitHub push to the owner, who pushes regularly, especially when handing off to another AI. If a protection or approval check blocks publication, stop that action, preserve the local result and report the reason; do not try another route around it.
-
-### Verified layout and current results
+### November 16 verification and open items
 
 - Main already contains separate captured mouse setups under `ai-twiddles/logitech-m705-chatgpt-voice/` and `ai-twiddles/logitech-m705-gemini-dictation/`. Both committed playbooks refer to `ai-twiddles/log-session.py`, which appends to the repository-root `chat.log`. It remains unchanged.
 - Earlier inspection mistakenly treated ignored `roles/setup-gemini/` files as the current setup. Main's committed tree and matching local Git history contain no `web_agent.py` at either the spoken underscore path or the hyphenated path. No evidence of overwriting Gemini's file was found; the file may be elsewhere or not yet saved. No contact with Gemini.
@@ -897,6 +892,44 @@ Updated the reusable prompts above to reflect the current rule. Existing histori
 Prepared isolated correction branch codex/ai-twiddles-review-before-main from current origin/main. Its only planned main-target changes are ai-twiddles/codex/README.md and AGENTS.md. Commit/push and a reviewable PR are authorized; the correction must remain unmerged pending explicit owner approval. No mouse setup, Gemini files, shared logger, API client or live system changes.
 
 Correction publication checkpoint: scoped commit df1c190 pushed on codex/ai-twiddles-review-before-main; https://github.com/denebeim/mostly-harmless/pull/17 (Require owner approval before integrating Codex experiments) is open and unmerged, explicitly awaiting owner review/approval. No auto-merge enabled. Main remains at prior approved-era merge 77fa0c6. Scoped whitespace review passed; a literal wording check initially expected “auto-merge” while README used “automatic merge”; corrected wording check passed for both files. No runtime changes. This independent work-log update is separately authorized for commit/push; it is not a main integration.
+
+## 2026-11-16 — Voice shortcut API fallback feasibility and logging correction
+
+Inspected current /home/denebeim/.local/bin/chatgpt-voice-toggle: it launches/focuses /usr/bin/chatgpt and emits Ctrl+Alt+Shift+F12 through uinput. It has no API transport, model selection, key handling, quota signal or fallback provider. Left mouse/Voice setup unchanged. Built-in ChatGPT Voice account experience cannot be turned into a provider-routing client merely by changing that key-emission script; no supported API-key override/fallback was established in current official documentation.
+
+Google comparison: repository roles/setup-gemini/scripts/agent.py has GEMINI_API_KEY and GEMINI_PAID_API_KEY branches, but the quota branch only replaces client, not existing chat; the retry/preservation path is incomplete. roles/setup-gemini/files/gemini-toggle references a web_agent.py absent at that location. Live ~/.local/bin/gemini-toggle is still the distinct browser-focus implementation inspected previously. Do not treat this source as proof a working Google API failover is deployed. No Google changes or credential probes.
+
+Official OpenAI sources fetched November 16: https://learn.chatgpt.com/docs/features/voice (built-in subscription-based Voice, task integration); https://developers.openai.com/api/docs/models/gpt-realtime-2.1-mini (Free tier not supported); https://developers.openai.com/api/docs/pricing (mini audio $10 input/$20 output per million tokens, text $0.60/$2.40; GPT-Live $0.05/minute plus backend/tools); https://developers.openai.com/api/docs/guides/chatgpt-api-credits (eligible paid Pro/Business subscription benefits can cover Realtime/GPT-Live, credits-first then purchased credits, do not increase signed-in ChatGPT/Codex limits; eligibility/account activation unverified). No unconditional free OpenAI voice API tier promised. Existing Pro/Business credits are a possible allowance, not an independently free tier.
+
+Recommendation: preserve working built-in Voice shortcut. If API failover is required, add a separate optional client rather than silently replace the current assistant/task experience. Candidate lower-cost paid direct speech model is gpt-realtime-2.1-mini; GPT-Live is closer to a separate voice frontend/backend design and adds per-minute plus backend/tool costs. Custom client does not automatically inherit ChatGPT history, tasks, tools or permissions. Required next decision: whether a separate API voice client is acceptable; if yes check credit eligibility, select free-primary meaning (eligible credits or separately evaluated local/other provider), and spending budget before billable use. No API request, billing change or client replacement performed.
+
+Logging audit found checked-out scripts/log-session.py had reverted to eddie-session.log default and logged argv despite current AGENTS instructions. First three wrapped diagnostic runs landed in that old file; recovered their output into existing /home/denebeim/projects/mostly-harmless/chat.log, left old logs intact, restored default and current CONTROLLER/HANDOFF paths, removed argv metadata, set existing chat.log mode 0600 and creation mode 0600. Verified random stdout marker in exact chat.log, then explicit stdout/stderr marker plus exit 7 preserved in that same file. All commands remain wrapped. Source/browser tool results are summarized here, not shell-intercepted. Preserved unrelated requirements.txt change.
+
+
+## 2026-11-17 — Read-only browser-history investigation for November 16
+
+Owner request: inspect benjymouse browser history for November 16, 2026 local time, locating YouTube videos reached from Facebook or Mastodon about Pete Hegseth, dismissed officers subsequently elected to Congress, and an incoming member who says he attended school with Hegseth. Follow-up explicitly authorized this WORKLOG entry; no other repository edits authorized. Referenced ChatGPT chat: 6afc0745-839c-83e8-8b9d-ad77764bf8ef, “Draft Post Analysis.” Its assertions were treated as leads, not evidence.
+
+Method and scope:
+- Local hostname confirmed benjymouse.local.deepthot.org. Search interval America/Phoenix (UTC−07:00), 2026-11-16 00:00:00 inclusive through 2026-11-17 00:00:00 exclusive; UTC interval 2026-11-16 07:00:00 through 2026-11-17 07:00:00. Converted Chromium microseconds since 1601 and Firefox Unix microseconds explicitly.
+- Discovered 17 history databases under ~/.config, ~/.mozilla and ~/snap: current Chrome Default/Profile 2/Profile 4; seven google-chrome.old profiles; two Firefox profiles; snap Chromium Profile 2; snap Skype Firefox; and three Codex browser/partition databases. No history databases discovered under ~/.var/app.
+- Initial SQLite mode=ro/query_only reads encountered locks on active Chrome/Firefox and an inaccessible Firefox database. Retried using temporary byte copies of databases and available -wal/-shm companions, opened copied databases mode=ro with query_only enabled. Temporary copies were removed automatically. Originals were never opened for writing; no browser restart, configuration change, history deletion or checkpoint requested. Byte copies of live databases are not guaranteed transactional snapshots.
+- Active Firefox profile had 157 visits in the interval and Chrome Profile 4 had four; remaining databases returned zero. Firefox had two watch-page candidates, both unrelated music; neither supports the requested topic. One music visit had a Mastodon referrer, but it is excluded from this report. No matching Hegseth/Lacore URL or title and no matching YouTube video found. Social redirect URLs containing YouTube were also checked in that Firefox day window; none found. No relevant exact video URL/title/visit timestamp can therefore be reported from local history. Counts are diagnostics, not a disclosure of unrelated browsing content.
+
+Independently retrieved evidence (accessed November 17):
+1. “Women veterans increase their ranks in Congress, including ousted admiral,” Jennifer H. Svan, Stars and Stripes, November 9, 2026: https://www.stripes.com/veterans/2026-11-09/women-veterans-midterms-hegseth-23411610.html . Opened full article. Reports Nancy Lacore won a House race after Hegseth removed her as Navy Reserve chief. Identifies numerous other veteran winners but does not establish that those winners were officers fired by Hegseth. Thus supports a singular example, not the broader plural claim.
+2. CBS’s November 8 interview identifies Lacore as congresswoman-elect and confirms Hegseth removed her in August 2025. Transcript: https://www.cbsnews.com/news/nancy-lacore-south-carolina-democrat-face-the-nation-transcript-11-08-2026/ . Opened transcript, including interview discussion of removal. Source video landing page: https://www.cbsnews.com/video/rep-elect-nancy-lacore-says-she-was-never-given-a-reason-why-pete-hegseth-fired-her/ . Listed duration 05:26. This is a public source lead, not a recovered history match or proof of watching it. No YouTube equivalent or personal viewing timestamp established.
+3. AP election-call search result, November 6, 2026 23:52:11 UTC: “Democrat Nancy Lacore wins election to U.S. House in South Carolina’s 1st Congressional District,” https://apnews.com/article/748d4a53926f4372bae5ca5118d65ec6 . Search result supports election; direct open failed, so not claimed as full-text verification. AP syndication search result: https://www.chron.com/news/politics/article/democrat-nancy-lacore-wins-election-to-u-s-house-22517457.php . Not independently opened.
+4. Corroborating election-report leads from search results, not full-page verification: https://scdailygazette.com/2026/11/04/nancy-lacore-declares-victory-in-scs-1st-congressional-district/ and https://www.live5news.com/2026/11/04/lacore-claims-sc-01-victory-says-costa-honeycutt-conceded-race/ . Do not confuse victory declarations with certification.
+
+Searches for Hegseth plus schoolmate/classmate/went-to-school/went-to-college and Congress/elected, including YouTube-specific searches, did not identify a verified incoming member making the remembered claim. An exploratory name search did not establish a match; no identity assigned. Prior ChatGPT confidence is not substituted for evidence.
+
+Findings and unresolved questions:
+- Confirmed public-source example: Nancy Lacore, retired vice admiral, dismissed Navy Reserve chief and incoming South Carolina House member. Election certification was not independently examined.
+- Unresolved: exact remembered YouTube videos, their titles, publication times, personal visit timestamps, Facebook/Mastodon referral chain, schoolmate identity and exact statement, and additional fired officers elected to Congress.
+- Local absence does not prove the videos were not watched: embedded playback, browser history retention/deletion, private browsing, another device/account, or a different day could explain missing records. These possibilities were not established. No account watch-history, social-media account content or browser session/cache content was inspected; date scope was not expanded.
+- Privacy incident: one overly broad diagnostic emitted two unrelated watch entries, a social referrer and an account redirect URL into the mandatory shared command log. Details are intentionally not reproduced here. The existing log was not rewritten or truncated under the standing logging contract. Subsequent report omits unrelated history. No claim of flawless filtering or machine-wide connector capture is made.
+- All shell commands used /home/denebeim/projects/mostly-harmless/scripts/log-session.py; normal stdout/stderr appended to ignored chat.log. Web/chat connector retrieval is not intercepted by the shell logger. No commit/push or browser-profile mutation performed. Existing dirty CONTROLLER.md, HANDOFF.md, requirements.txt, scripts/log-session.py and earlier WORKLOG content preserved; only this entry was appended by this investigation.
 
 ## 2026-11-18 — Work-log authorship
 
@@ -934,44 +967,13 @@ on the local work-log branch. Recorded frequent local commits by the agent and
 GitHub pushes by the owner, especially for AI handoffs. Preserved the explicit
 review and approval requirement for main integration.
 
-## 2026-11-20 — Eddie LibreChat deployment
+## 2026-11-20 — ISC BIND9 and Kea DHCPv4/DDNS prototype on testservices
 
-Author: OpenAI Codex
+Author: Zoo
 
-Tracked in https://github.com/denebeim/mostly-harmless/issues/18. Prepared the
-standalone Ansible playbook under ai-twiddles/codex/librechat-eddie on
-codex/ai-twiddles-librechat. Live baseline: Eddie resolved to 192.168.42.132
-under both LAN names, port 80 was free, Docker Compose v5.7.1 was available,
-Hermes was up for seven days, and host Ollama 0.40.15 listed qwen3.5:4b.
-MongoDB's AVX prerequisite was present. Eddie had about 20 GiB free before
-image pulls.
-
-The deployment uses the established owner's SSH access to Docker. It puts
-LibreChat and MongoDB in a separate Compose project, publishes only the
-application on Eddie's LAN address at TCP 80, and keeps MongoDB on an internal
-network with persistent volumes. The app reaches host Ollama through Docker's
-host gateway. The VM provisioning playbook, Hermes, and Ollama configuration
-are outside the deployment. Chose a minimal stack for local chat and pinned both
-images by digest. The owner authorized a local LibreChat account. Public
-self-registration is disabled. Deepthot sign-in and TLS are deferred.
-
-Initial Ansible deployment passed with five changes. Importing the LibreChat
-image took about 13 minutes before Compose started the containers. The
-controller fetched the LibreChat page over http://eddie and the app container
-reached Ollama. Created the owner's local account using the upstream account
-tool with a generated password supplied over SSH stdin. The password was
-delivered separately in a private file on Benjymouse.
-
-Signed in over Eddie's port 80 from an SSH session on Eddie. The application
-listed only its Ollama endpoint and qwen3.5:4b. A signed-in chat through
-LibreChat returned a completed answer to a test prompt. Plain HTTP is LAN-only
-by intent. Eddie itself resolves the short host name differently from the
-controller, so authenticated checks on Eddie used its LAN IP directly.
-
-The final digest-pinned playbook is commit 7c49a5c on the experiment branch.
-The first run with both digests pinned applied two changes. The immediate
-repeat reported ok=10, changed=0 and failed=0. The local login still worked
-after the MongoDB container recreated. Final inspection showed healthy MongoDB,
-LibreChat published at 192.168.42.132:80, uninterrupted seven-day Hermes
-uptime, active Ollama, and qwen3.5:4b running at 100% GPU with 65536 context.
-There was no cloud inference. Shell output was captured through chat.log.
+- Created branch `gemini/isc-dhcp-dns` and subdirectory `ai-twiddles/gemini/isc-services/`.
+- Spun up `testservices` (VM 8315, `192.168.42.202`, `tags: [ipa]`) using `vm.yaml` via `ai-twiddles/gemini/isc-services/testservices.yaml`.
+- Populated `isc_services.yaml` and `kea-dhcp4.conf.j2` from `/etc/pihole/pihole.toml` on `services` (`192.168.42.2`), preserving user-owned machine IPs (`giles` `.98`, `willow` `.99`) and configuring the 20-IP `user_machines` pool at `192.168.42.70 - 192.168.42.99`, `vm_clients` at `.200 - .239`, and IoT VLAN `192.168.43.0/24` at `.100 - .250`.
+- Verified on `testservices`: `named-checkconf`, `kea-dhcp4 -t`, and `kea-dhcp-ddns -t` passed; `bind9`, `kea-dhcp4-server`, and `kea-dhcp-ddns-server` are active and enabled (`ok=10 changed=2 failed=0`).
+- Note for future IP renumbering: `valheim` (`.123`) is a game server and belongs in the **Applications** group; `plex` (`.186`) and `arr` (`.131`) belong in their own **Media** group. Both are currently up and should be moved when we get to them.
+- Next: review reverse zone files (`db.192.168.42`, `db.192.168.43`), inventory `/etc/pihole/dhcp.leases` on `services` (via `ansible` credentials), and refine actual IoT/user MAC OUI lists.
