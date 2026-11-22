@@ -1107,3 +1107,10 @@ MongoDB had zero users before the human test. First-sign-in registration
 was enabled. The running config showed Eddie as the default with a persona
 prompt and Plain Ollama with an empty prompt. Joy's first interactive sign-in
 and chat, and any Docker uninstall or VM retirement, are separate checks.
+
+Joy completed the first interactive Authentik sign-in and got a reply. The
+fresh database counted one OpenID account and one saved assistant reply;
+the saved conversation used the Eddie preset. Checked counts and preset
+only, without reading conversation contents from the database. Proxmox
+listed eddie.good (314, stopped) and eddie (4242, running). Neither VM
+was removed.
