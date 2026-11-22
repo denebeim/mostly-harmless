@@ -1040,3 +1040,17 @@ challenge infrastructure, and the private controller vault. It does not
 rotate an existing provider secret. Local syntax, scoped inventory and
 staged whitespace checks passed. The automatic approval review declined
 a live run of the new combined entrypoint. Joy will review when ready.
+
+## 2026-11-22 — Eddie persona and review draft
+
+Author: OpenAI Codex
+
+Added Joy's corrected soul file to the Eddie playbook in commit 2e17b71.
+New chats use the Eddie model specification by default. Plain Ollama selects
+the same local model with an empty persona prompt. Ansible rendered both
+choices correctly, the rebuild syntax check passed, and a test merge against
+origin/main found no conflicts. Automatic approval review declined the
+live apply because a LibreChat restart was not explicitly authorized.
+The working Eddie instance continues with its prior settings.
+
+Published the isolated branch as draft PR #23 for review before integration.
