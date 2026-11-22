@@ -1090,3 +1090,20 @@ Docker's default 60-second local API read timeout. The image and container
 were absent at the follow-up check. Raised the Hermes task's timeout to
 900 seconds in commit 9657e9b and updated draft PR #23. Syntax passed.
 The retry, LibreChat first SSO login, and test chat are still pending.
+
+### Master playbook retry on VM 4242
+
+Author: OpenAI Codex
+
+Joy reran the master with the longer Hermes Docker timeout. Hermes started
+and the role passed its local inference check. The existing Authentik app
+converged with no changes, an Eddie-specific certificate was installed on
+the new VM, and LibreChat, MongoDB and Nginx started. The complete run
+returned exit 0 with no failed or unreachable hosts. The controller checked
+HTTPS and the app container reached Ollama. A separate probe confirmed
+trusted HTTPS and Authentik's authorization redirect with the exact callback.
+
+MongoDB had zero users before the human test. First-sign-in registration
+was enabled. The running config showed Eddie as the default with a persona
+prompt and Plain Ollama with an empty prompt. Joy's first interactive sign-in
+and chat, and any Docker uninstall or VM retirement, are separate checks.
