@@ -1054,3 +1054,20 @@ live apply because a LibreChat restart was not explicitly authorized.
 The working Eddie instance continues with its prior settings.
 
 Published the isolated branch as draft PR #23 for review before integration.
+
+## 2026-11-22 — Make eddie.yaml the full build entrypoint
+
+Author: OpenAI Codex
+
+Joy clarified the machine playbook contract. The machine-named entrypoint
+must reach the complete configuration after a rebuild, while each feature
+remains runnable on its own for changes to an existing machine. Eddie's
+master now imports the LibreChat SSO setup after VM and application
+provisioning. The existing Docker permission and the new VM's verified
+host key are reused. An alternate VM ID can keep the powered-off original
+available as a rollback. LAN DNS stays a prerequisite; no DNS changes were
+made.
+
+Local syntax and play order checks passed for the master and feature
+entrypoints. The test merge found no conflicts. Updated draft PR #23
+at commit 3ef0bb5. No Proxmox or live build was run.
