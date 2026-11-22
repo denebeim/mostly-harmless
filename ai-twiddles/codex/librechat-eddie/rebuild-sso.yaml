@@ -1,0 +1,19 @@
+---
+- name: Configure Eddie's Authentik provider
+  ansible.builtin.import_playbook: authentik.yaml
+
+- name: Prepare Eddie's LAN certificate
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Issue or renew the hostname-specific certificate when needed
+      ansible.builtin.command:
+        argv:
+          - "{{ ansible_playbook_python }}"
+          - "{{ playbook_dir }}/renew-tls.py"
+      register: eddie_certificate
+      changed_when: "'Installed Eddie' in eddie_certificate.stdout"
+
+- name: Deploy LibreChat and verify LAN HTTPS
+  ansible.builtin.import_playbook: playbook.yaml

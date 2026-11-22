@@ -1,0 +1,94 @@
+"""Maintain Eddie's application in the installed Authentik service."""
+
+from hmac import compare_digest
+
+from django.db import transaction
+
+from authentik.core.models import Application, Group, User
+from authentik.crypto.models import CertificateKeyPair
+from authentik.flows.models import Flow
+from authentik.policies.models import PolicyBinding
+from authentik.providers.oauth2.models import OAuth2Provider, ScopeMapping
+
+
+client_id = {{ librechat_oidc_client_id | to_json }}
+client_secret = {{ librechat_oidc_client_secret | to_json }}
+callback = {{ (librechat_url ~ '/oauth/openid/callback') | to_json }}
+launch_url = {{ (librechat_url ~ '/') | to_json }}
+access_group = {{ librechat_authentik_group | to_json }}
+extra_username = {{ librechat_authentik_extra_user | to_json }}
+
+with transaction.atomic():
+    group = Group.objects.get(name=access_group)
+    extra_user = User.objects.get(username=extra_username, is_active=True)
+    authorization = Flow.objects.get(slug="default-provider-authorization-explicit-consent")
+    invalidation = Flow.objects.get(slug="default-provider-invalidation-flow")
+    signing_key = CertificateKeyPair.objects.get(name="authentik Self-signed Certificate")
+    scopes = ScopeMapping.objects.filter(
+        scope_name__in=("openid", "profile", "email"),
+        managed__startswith="goauthentik.io/providers/oauth2/scope-",
+    )
+    if set(scopes.values_list("scope_name", flat=True)) != {"openid", "profile", "email"}:
+        raise RuntimeError("Authentik is missing a standard OpenID scope")
+
+    provider, changed = OAuth2Provider.objects.get_or_create(
+        name="Provider for Eddie",
+        defaults={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "client_type": "confidential",
+            "authorization_flow": authorization,
+            "invalidation_flow": invalidation,
+            "signing_key": signing_key,
+            "_redirect_uris": [{"matching_mode": "strict", "url": callback}],
+        },
+    )
+    if not (
+        compare_digest(provider.client_id, client_id)
+        and compare_digest(provider.client_secret, client_secret)
+    ):
+        raise RuntimeError("Existing Eddie provider credentials do not match the deployment vault")
+    if not (
+        provider.client_type == "confidential"
+        and provider.authorization_flow_id == authorization.pk
+        and provider.invalidation_flow_id == invalidation.pk
+        and provider.signing_key_id == signing_key.pk
+        and [(r.matching_mode, r.url) for r in provider.redirect_uris] == [("strict", callback)]
+    ):
+        raise RuntimeError("Existing Eddie provider differs from the expected settings")
+
+    if set(provider.property_mappings.values_list("pk", flat=True)) != set(
+        scopes.values_list("pk", flat=True)
+    ):
+        provider.property_mappings.set(scopes)
+        changed = True
+
+    app, created = Application.objects.get_or_create(
+        slug="eddie",
+        defaults={
+            "name": "Eddie LibreChat",
+            "provider": provider,
+            "policy_engine_mode": "any",
+            "meta_launch_url": launch_url,
+        },
+    )
+    changed |= created
+    if app.provider_id != provider.pk or app.policy_engine_mode != "any":
+        raise RuntimeError("Existing Eddie application has an unexpected provider or access mode")
+
+    expected = {(group.pk, None, 0), (None, extra_user.pk, 1)}
+    existing = list(PolicyBinding.objects.filter(target=app))
+    if any(
+        (binding.group_id, binding.user_id, binding.order) not in expected
+        or not binding.enabled
+        or binding.negate
+        or binding.policy_id is not None
+        for binding in existing
+    ):
+        raise RuntimeError("Existing Eddie access bindings need review")
+    _, created = PolicyBinding.objects.get_or_create(target=app, group=group, order=0)
+    changed |= created
+    _, created = PolicyBinding.objects.get_or_create(target=app, user=extra_user, order=1)
+    changed |= created
+
+print("EDDIE_PROVIDER_CHANGED" if changed else "EDDIE_PROVIDER_CURRENT")

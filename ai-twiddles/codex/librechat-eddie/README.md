@@ -14,6 +14,7 @@ the community.docker version pinned in collections/requirements.yml:
 
 ```sh
 python3 /home/denebeim/projects/mostly-harmless/scripts/log-session.py \
+  env ANSIBLE_CONFIG=/home/denebeim/projects/mostly-harmless/ansible.cfg \
   /home/denebeim/projects/mostly-harmless/.venv/bin/ansible-playbook \
   -i ai-twiddles/codex/librechat-eddie/inventory.ini \
   ai-twiddles/codex/librechat-eddie/playbook.yaml \
@@ -40,7 +41,30 @@ credentials.
 
 ## Optional Authentik sign-in
 
-OpenID Connect is disabled by default. To enable it on rebuilt Eddie:
+OpenID Connect is disabled by default. To rebuild the existing SSO setup,
+first provision Eddie's VM and Docker and make sure Pi-hole resolves
+`eddie.local.deepthot.org` to Eddie. The controller also needs the existing
+Docker access on the Authentik host, SSH access as the Ansible user to Eddie
+and the DMZ, and the private OIDC vault. From the experiment checkout:
+
+```sh
+python3 /home/denebeim/projects/mostly-harmless/scripts/log-session.py \
+  env ANSIBLE_CONFIG=/home/denebeim/projects/mostly-harmless/ansible.cfg \
+  /home/denebeim/projects/mostly-harmless/.venv/bin/ansible-playbook \
+  -i ai-twiddles/codex/librechat-eddie/inventory.ini \
+  ai-twiddles/codex/librechat-eddie/rebuild-sso.yaml \
+  --extra-vars "@$HOME/.local/share/deepthot-eddie/oidc.vault.yml" \
+  --vault-id "eddie@$HOME/.local/share/deepthot-eddie/vault-password" \
+  --ssh-common-args='-F /dev/null -o BatchMode=yes -o StrictHostKeyChecking=yes'
+```
+
+The rebuild entrypoint configures Eddie's provider and access bindings in
+Authentik, obtains a certificate if needed, and deploys Eddie's HTTPS and
+LibreChat containers. It checks existing provider settings against the vault
+before using them. Back up the private vault and its password independently
+of this repository. Neither the vault nor the password is included here.
+
+For the individual setup steps and required settings:
 
 1. Use `https://eddie.local.deepthot.org` for the LAN URL. Prepare Eddie's
    certificate with `renew-tls.py` before applying the playbook. The playbook
@@ -55,10 +79,7 @@ OpenID Connect is disabled by default. To enable it on rebuilt Eddie:
    Eddie-only binding for `ookami`.
 3. Pass the following variables in an Ansible Vault-encrypted extra-vars file
    using `--extra-vars @/path/to/eddie-auth.vault.yml --ask-vault-pass`.
-   Benjymouse's current private deployment files are under
-   `~/.local/share/deepthot-eddie/`. Use `--extra-vars
-   @~/.local/share/deepthot-eddie/oidc.vault.yml` with the absolute path
-   substituted for `~`, and `--vault-id eddie@$HOME/.local/share/deepthot-eddie/vault-password`.
+   The rebuild command above uses the current private files on Benjymouse.
    Generate a distinct, persistent random session secret of at least 32
    characters. Copy the discovery URL from the provider page.
 
