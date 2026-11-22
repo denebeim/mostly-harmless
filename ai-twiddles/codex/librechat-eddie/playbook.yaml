@@ -11,6 +11,7 @@
     librechat_proxy_image: nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
     librechat_mongo_image: mongo:8.0.20@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef
     librechat_model: "qwen3.5:4b"
+    librechat_soul_file: "{{ playbook_dir }}/SOUL.md"
   tasks:
     - name: Resolve the deployment account's home
       ansible.builtin.command: printenv HOME

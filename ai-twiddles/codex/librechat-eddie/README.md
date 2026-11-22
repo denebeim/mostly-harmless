@@ -119,3 +119,10 @@ From the project directory on Eddie, use
 The volumes persist. To bring them back, rerun the playbook. For an image
 rollback, restore the prior image references and rerun, restoring the compatible
 database backup if the newer release applied incompatible migrations.
+
+## Eddie's persona
+
+New chats start with **Eddie**, using the prompt in [SOUL.md](SOUL.md).
+Choose **Plain Ollama** in the model menu for a new chat without the persona.
+Both choices use the same local Ollama model. Edit SOUL.md and rerun the
+LibreChat playbook with the active deployment's variables to update Eddie.
