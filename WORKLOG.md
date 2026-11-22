@@ -1071,3 +1071,22 @@ made.
 Local syntax and play order checks passed for the master and feature
 entrypoints. The test merge found no conflicts. Updated draft PR #23
 at commit 3ef0bb5. No Proxmox or live build was run.
+
+## 2026-11-22 — Eddie clean-build test on VM 4242
+
+Author: OpenAI Codex
+
+Joy ran the full Eddie master on a fresh VM, keeping the previous Eddie
+powered off. The first pass created, patched and pinned the new VM, then
+stopped because the controller lacked an IPA Kerberos ticket. After kinit,
+the next pass reached IPA enrollment, which failed on LDAPS TCP 636.
+A packet trace showed an explicit administrative rejection from the IPA
+VM; firewalld's active zone allowed FreeIPA LDAP but not LDAPS. After Joy
+opened access for the test, enrollment and automount completed.
+
+The next pass installed Docker, validated the K5200 driver, verified
+Ollama over the LAN and downloaded Qwen. Hermes creation timed out on
+Docker's default 60-second local API read timeout. The image and container
+were absent at the follow-up check. Raised the Hermes task's timeout to
+900 seconds in commit 9657e9b and updated draft PR #23. Syntax passed.
+The retry, LibreChat first SSO login, and test chat are still pending.
