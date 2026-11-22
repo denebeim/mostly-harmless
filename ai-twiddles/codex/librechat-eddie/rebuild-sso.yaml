@@ -6,12 +6,15 @@
   hosts: localhost
   connection: local
   gather_facts: false
+  any_errors_fatal: true
   tasks:
     - name: Issue or renew the hostname-specific certificate when needed
+      vars:
+        eddie_known_hosts: "{{ hostvars['eddie'].vm_known_hosts_file | default('') }}"
       ansible.builtin.command:
-        argv:
-          - "{{ ansible_playbook_python }}"
-          - "{{ playbook_dir }}/renew-tls.py"
+        argv: >-
+          {{ [ansible_playbook_python, playbook_dir ~ '/renew-tls.py']
+             + (['--eddie-known-hosts', eddie_known_hosts] if eddie_known_hosts else []) }}
       register: eddie_certificate
       changed_when: "'Installed Eddie' in eddie_certificate.stdout"
 

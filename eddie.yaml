@@ -1,9 +1,27 @@
 ---
+- name: Require the private credentials for a complete Eddie build
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Check that Eddie's SSO deployment variables were supplied
+      ansible.builtin.assert:
+        that:
+          - librechat_oidc_enabled | default(false) | bool
+          - librechat_url | default('') == 'https://eddie.local.deepthot.org'
+          - librechat_oidc_discovery_url | default('') | length > 0
+          - librechat_oidc_client_id | default('') | length > 0
+          - librechat_oidc_client_secret | default('') | length > 0
+          - librechat_oidc_session_secret | default('') | length >= 32
+        fail_msg: The complete Eddie build requires the private LibreChat SSO vault.
+      no_log: true
+
 - ansible.builtin.import_playbook: vm.yaml
   vars:
     vm:
       name: eddie
-      id: 314
+      id: "{{ eddie_vm_id | default(314) | int }}"
       ip: 192.168.42.132
       memory: 16384
       cores: 8
@@ -25,3 +43,5 @@
       - /dev/dri:/dev/dri
       - /dev/nvidia0:/dev/nvidia0
       - /dev/nvidiactl:/dev/nvidiactl
+
+- ansible.builtin.import_playbook: ai-twiddles/codex/librechat-eddie/rebuild-sso.yaml

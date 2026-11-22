@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Issue or renew Eddie's certificate without moving either host's secrets."""
 
+import argparse
 import shlex
 import subprocess
 
@@ -54,8 +55,15 @@ fi
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--eddie-known-hosts", help="Verified host-key file for this Eddie VM")
+    args = parser.parse_args()
+    eddie_ssh = SSH.copy()
+    if args.eddie_known_hosts:
+        eddie_ssh.extend(["-o", f"UserKnownHostsFile={args.eddie_known_hosts}"])
+
     request = subprocess.run(
-        SSH + [EDDIE, "sudo -n bash -c " + shlex.quote(PREPARE)],
+        eddie_ssh + [EDDIE, "sudo -n bash -c " + shlex.quote(PREPARE)],
         stdout=subprocess.PIPE, timeout=30)
     if request.returncode == 10:
         print("Eddie's certificate has more than 30 days left.")
@@ -65,7 +73,7 @@ def main():
         SSH + [DMZ, "bash -c " + shlex.quote(ISSUE)],
         input=request.stdout, stdout=subprocess.PIPE, timeout=180, check=True)
     subprocess.run(
-        SSH + [EDDIE, "sudo -n bash -c " + shlex.quote(INSTALL)],
+        eddie_ssh + [EDDIE, "sudo -n bash -c " + shlex.quote(INSTALL)],
         input=result.stdout, timeout=30, check=True)
     print("Installed Eddie's verified certificate chain.")
 

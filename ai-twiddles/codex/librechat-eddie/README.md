@@ -7,6 +7,42 @@ keys configured. MongoDB runs on a dedicated internal Docker network. Database
 and application files persist in Docker volumes. Search and document retrieval
 services are outside this deployment.
 
+## Which playbook to run
+
+- **Whole machine from scratch:** run the repository-root
+  [eddie.yaml](../../../eddie.yaml) from the Ansible controller using its
+  normal Proxmox inventory and the SSO vault below. It provisions the VM,
+  configures IPA, Docker, GPU, Ollama and Hermes, then imports the complete
+  LibreChat SSO setup. If retaining the old powered-off VM as rollback,
+  supply `-e eddie_vm_id=YOUR_NEW_UNUSED_ID` so the original VM ID remains
+  untouched. Both machines cannot use Eddie's IP or passed-through GPU
+  at the same time.
+- **LibreChat including its external dependencies:** run
+  [rebuild-sso.yaml](rebuild-sso.yaml) against an existing Eddie VM. It
+  configures the Eddie application in Authentik, prepares the certificate
+  and deploys LibreChat.
+- **LibreChat-only changes on the running machine:** run
+  [playbook.yaml](playbook.yaml) with the active SSO vault arguments.
+  Use this for changes to the web appearance, settings, soul file or
+  container images. It does not run VM provisioning or change Authentik.
+
+For the full-machine test, source the controller's usual private environment
+from the controller checkout, then run:
+
+```sh
+python3 /home/denebeim/projects/mostly-harmless/scripts/log-session.py \
+  /home/denebeim/projects/mostly-harmless/.venv/bin/ansible-playbook \
+  /tmp/mostly-harmless-librechat/eddie.yaml \
+  --extra-vars "@$HOME/.local/share/deepthot-eddie/oidc.vault.yml" \
+  --vault-id "eddie@$HOME/.local/share/deepthot-eddie/vault-password" \
+  --ssh-common-args='-F /dev/null'
+```
+
+Use the checkout under review for the playbook path. The fixed IP and verified
+SSH host key are carried forward from VM provisioning to the certificate step.
+The controller's Proxmox and IPA access, Eddie's LAN DNS record, and the
+existing Authentik and DNS-challenge services remain prerequisites.
+
 ## Install and update
 
 From the repository root, use the controller's existing Ansible environment and
@@ -21,8 +57,9 @@ python3 /home/denebeim/projects/mostly-harmless/scripts/log-session.py \
   --ssh-common-args='-F /dev/null -o BatchMode=yes -o StrictHostKeyChecking=yes'
 ```
 
-Use the existing SSH account with Docker access and keep it consistent across
-runs. The project lives in that account's ~/.local/share/librechat-eddie.
+The application play uses the existing Deepthot SSH account (denebeim
+by default). Keep it consistent across runs. Docker access can come from
+the existing IPA Docker sudo rule. The project lives in that account's ~/.local/share/librechat-eddie.
 This design uses existing Docker access without requiring general sudo or
 running Eddie's VM provisioning. Update the image references in the playbook
 to adopt a reviewed release, then rerun. Back up MongoDB and instance secrets

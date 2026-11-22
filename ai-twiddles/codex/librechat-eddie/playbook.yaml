@@ -3,6 +3,7 @@
   hosts: eddie
   gather_facts: false
   vars:
+    ansible_user: "{{ librechat_deploy_user | default('denebeim') }}"
     librechat_ip: 192.168.42.132
     librechat_url: http://eddie
     librechat_oidc_enabled: false
@@ -73,6 +74,12 @@
             state: directory
             mode: "0700"
 
+        - name: Install the project Docker command
+          ansible.builtin.copy:
+            src: docker-cli.sh
+            dest: "{{ librechat_dir }}/docker-cli"
+            mode: "0700"
+
         - name: Generate persistent instance secrets on first install
           ansible.builtin.shell:
             cmd: |
@@ -118,7 +125,7 @@
         - name: Validate HTTPS proxy and certificate before replacing the listener
           ansible.builtin.command:
             argv:
-              - docker
+              - "{{ librechat_dir }}/docker-cli"
               - run
               - --rm
               - --network
@@ -144,6 +151,7 @@
 
         - name: Converge LibreChat and MongoDB
           community.docker.docker_compose_v2:
+            docker_cli: "{{ librechat_dir }}/docker-cli"
             project_src: "{{ librechat_dir }}"
             project_name: librechat-eddie
             pull: missing
@@ -173,7 +181,7 @@
         - name: Verify the app container can reach Ollama
           ansible.builtin.command:
             argv:
-              - docker
+              - "{{ librechat_dir }}/docker-cli"
               - compose
               - --project-name
               - librechat-eddie

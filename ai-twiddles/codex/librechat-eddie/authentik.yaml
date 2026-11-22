@@ -1,7 +1,23 @@
 ---
+- name: Register the existing Authentik service for this deployment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Add the Authentik deployment target
+      ansible.builtin.add_host:
+        name: authentik-services
+        groups: librechat_authentik
+        ansible_host: 192.168.42.2
+        ansible_python_interpreter: /usr/bin/python3
+      when: groups.get('librechat_authentik', []) | length == 0
+      changed_when: false
+
 - name: Manage Eddie's OpenID Connect application in Authentik
   hosts: librechat_authentik
   gather_facts: false
+  any_errors_fatal: true
   vars:
     librechat_authentik_container: authentik_server_1
     librechat_authentik_group: Folks who Live Here
