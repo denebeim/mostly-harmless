@@ -1027,3 +1027,16 @@ and the exact callback. Joy confirmed that Authentik returned her to
 LibreChat. Live Ansible convergence succeeded and the immediate rerun
 reported changed=0 and failed=0 with the Ollama check passing. The
 deployment is in local experiment commit e3a3469.
+
+## 2026-11-21 — Assemble the Eddie SSO rebuild playbooks
+
+Author: OpenAI Codex
+
+Added rebuild-sso.yaml and authentik.yaml to the isolated Eddie experiment
+in commit 9b4f92a. The rebuild entrypoint applies the Eddie-specific Authentik
+provider and bindings, checks or issues the Eddie certificate, and deploys
+the Docker stack. It depends on the existing VM, DNS, Authentik and DNS
+challenge infrastructure, and the private controller vault. It does not
+rotate an existing provider secret. Local syntax, scoped inventory and
+staged whitespace checks passed. The automatic approval review declined
+a live run of the new combined entrypoint. Joy will review when ready.
