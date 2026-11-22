@@ -8,6 +8,7 @@
     librechat_oidc_enabled: false
     librechat_oidc_allow_registration: false
     librechat_image: ghcr.io/librechat-ai/librechat:v0.8.9@sha256:51550d041e298f0740d98743a3ffdeac9be4cf6dcb1bcd938e6db8779c420fc4
+    librechat_proxy_image: nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
     librechat_mongo_image: mongo:8.0.20@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef
     librechat_model: "qwen3.5:4b"
   tasks:
@@ -35,7 +36,7 @@
     - name: Validate OpenID Connect deployment inputs
       ansible.builtin.assert:
         that:
-          - librechat_url is match('^https://[^/]+$')
+          - librechat_url == 'https://eddie.local.deepthot.org'
           - (librechat_oidc_discovery_url | default('')) is match('^https://auth[.]deepthot[.]org/.+')
           - (librechat_oidc_client_id | default('')) | length > 0
           - (librechat_oidc_client_secret | default('')) | length > 0
@@ -105,6 +106,34 @@
           diff: false
           when: librechat_oidc_enabled | bool
 
+        - name: Render Eddie's LAN HTTPS proxy
+          ansible.builtin.template:
+            src: nginx.conf.j2
+            dest: "{{ librechat_dir }}/nginx.conf"
+            mode: "0644"
+          register: librechat_proxy_config
+          when: librechat_oidc_enabled | bool
+
+        - name: Validate HTTPS proxy and certificate before replacing the listener
+          ansible.builtin.command:
+            argv:
+              - docker
+              - run
+              - --rm
+              - --network
+              - none
+              - --sysctl
+              - net.ipv4.ip_nonlocal_bind=1
+              - --mount
+              - "type=bind,src={{ librechat_dir }}/nginx.conf,dst=/etc/nginx/conf.d/default.conf,readonly"
+              - --mount
+              - "type=bind,src=/etc/librechat-eddie/tls,dst=/etc/librechat/tls,readonly"
+              - "{{ librechat_proxy_image }}"
+              - nginx
+              - -t
+          changed_when: false
+          when: librechat_oidc_enabled | bool and not ansible_check_mode
+
         - name: Render the isolated Compose project
           ansible.builtin.template:
             src: compose.yaml.j2
@@ -117,6 +146,7 @@
             project_src: "{{ librechat_dir }}"
             project_name: librechat-eddie
             pull: missing
+            remove_orphans: true
             wait: true
             wait_timeout: 180
           when: not ansible_check_mode

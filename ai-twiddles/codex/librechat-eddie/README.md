@@ -1,7 +1,7 @@
 # LibreChat on Eddie
 
-This experiment deploys LibreChat at http://eddie using an isolated Docker Compose
-project. Eddie's existing Ollama serves qwen3.5:4b through its local
+This experiment deploys LibreChat using an isolated Docker Compose
+project. The default URL is http://eddie. Eddie’s existing Ollama serves qwen3.5:4b through its local
 OpenAI-compatible API. LibreChat offers only this endpoint, with no cloud API
 keys configured. MongoDB runs on a dedicated internal Docker network. Database
 and application files persist in Docker volumes. Search and document retrieval
@@ -42,18 +42,23 @@ credentials.
 
 OpenID Connect is disabled by default. To enable it on rebuilt Eddie:
 
-1. Set up a trusted LAN HTTPS URL for LibreChat, such as
-   `https://eddie.local.deepthot.org`. An HTTPS reverse proxy on Eddie should
-   forward to `http://127.0.0.1:3080`, preserving the host and forwarding
-   protocol headers and chat streaming. Enabling this mode moves the Docker
-   listener from Eddie's LAN port 80 to localhost port 3080.
+1. Use `https://eddie.local.deepthot.org` for the LAN URL. Prepare Eddie's
+   certificate with `renew-tls.py` before applying the playbook. The playbook
+   starts an Nginx container on Eddie's LAN IP and port 443, and changes the
+   application listener to localhost port 3080. No WAN forwarding is needed.
 2. In Authentik at `https://auth.deepthot.org`, create an Eddie application
    with a confidential OAuth2/OpenID Connect provider. Register the exact
    redirect URI, for example
    `https://eddie.local.deepthot.org/oauth/openid/callback`. Grant the
-   application to the household group or explicitly selected users.
+   application to the household group or explicitly selected users. The live
+   Eddie application is limited to the `Folks who Live Here` group and an
+   Eddie-only binding for `ookami`.
 3. Pass the following variables in an Ansible Vault-encrypted extra-vars file
    using `--extra-vars @/path/to/eddie-auth.vault.yml --ask-vault-pass`.
+   Benjymouse's current private deployment files are under
+   `~/.local/share/deepthot-eddie/`. Use `--extra-vars
+   @~/.local/share/deepthot-eddie/oidc.vault.yml` with the absolute path
+   substituted for `~`, and `--vault-id eddie@$HOME/.local/share/deepthot-eddie/vault-password`.
    Generate a distinct, persistent random session secret of at least 32
    characters. Copy the discovery URL from the provider page.
 
@@ -78,6 +83,15 @@ OpenID Connect is disabled by default. To enable it on rebuilt Eddie:
 To return to the original local-only pilot, rerun without the OIDC extra-vars
 file. The old LAN HTTP listener returns, the managed OIDC environment file is
 removed after Compose converges, and the database is retained.
+
+## HTTPS certificate
+
+From Benjymouse, run `renew-tls.py` through the shared command logger. It
+keeps the private key on Eddie and uses the existing Cloudflare DNS challenge
+on the DMZ. Only the request and public certificate chain move between hosts.
+It skips renewal when the installed certificate has more than 30 days left.
+The initial certificate expires February 20, 2027. No unattended renewal job
+is configured.
 
 From the project directory on Eddie, use
 `docker compose --project-name librechat-eddie stop` to stop the two services.
