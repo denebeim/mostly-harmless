@@ -15,8 +15,9 @@ modelSpecs:
   list:
     - name: eddie
       label: Eddie
+      showOnLanding: true
       default: true
-      description: Cheerful shipboard computer
+      description: "Hello! Eddie here. I'm delighted to help."
       preset:
         endpoint: ollama
         model: "{{ librechat_model }}"
@@ -24,6 +25,7 @@ modelSpecs:
 {{ lookup('ansible.builtin.file', librechat_soul_file) | indent(10, true) }}
     - name: plain-ollama
       label: Plain Ollama
+      showOnLanding: true
       description: Same model without Eddie's persona
       preset:
         endpoint: ollama
