@@ -1000,3 +1000,30 @@ Eddie's proposed HTTPS endpoint refused connections and Authentik returned
 Encrypt certificate covers *.local.deepthot.org. A TLS route for Eddie,
 an Authentik application/provider and secure credentials still need
 configuration before an end-to-end sign-in test. No live change was made.
+
+## 2026-11-21 — Eddie Authentik sign-in live
+
+Author: OpenAI Codex
+
+Issued a hostname-specific Let's Encrypt certificate for
+eddie.local.deepthot.org through a Cloudflare DNS challenge run on the DMZ.
+The certificate's private key remains on Eddie and the Cloudflare credential
+remains on the DMZ. Eddie now terminates HTTPS directly with a pinned Nginx
+container and proxies to LibreChat on localhost. There is no new DMZ route
+or WAN forwarding. The renewal procedure is checked in, with no unattended
+renewal configured. The current certificate expires February 20, 2027.
+
+Registered Eddie as a confidential Authentik OpenID Connect application
+with a single exact HTTPS callback. Access is scoped to Folks who Live Here
+and an Eddie-only binding for ookami. Policy checks allowed Joy, Cheryl and
+ookami and denied an active nonmember. Ookami has no email on their
+Authentik profile. LibreChat requires an email-shaped identity for
+account creation. Regular LibreChat registration is disabled and the
+local administrator sign-in remains advertised. OIDC client settings are
+in a private Ansible Vault on Benjymouse with no secrets committed.
+
+Verified trusted HTTPS, both sign-in options, the authorization redirect
+and the exact callback. Joy confirmed that Authentik returned her to
+LibreChat. Live Ansible convergence succeeded and the immediate rerun
+reported changed=0 and failed=0 with the Ollama check passing. The
+deployment is in local experiment commit e3a3469.
