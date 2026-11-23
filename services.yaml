@@ -20,13 +20,17 @@
       - *services_ip
       - 1.1.1.1
       - 8.8.8.8
+    services_dns_search:
+      - "{{ bind9_domain_name }}"
+      - deepthot.org
+      - deepthot.aa
   pre_tasks:
     - name: Set the static resolver configuration before installing DNS packages
       ansible.builtin.copy:
         dest: /etc/resolv.conf
         content: |
           # Managed by Ansible in services.yaml
-          search {{ bind9_domain_name }}
+          search {{ services_dns_search | join(' ') }}
           {% for server in services_dns_servers %}
           nameserver {{ server }}
           {% endfor %}
