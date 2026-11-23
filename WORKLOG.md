@@ -1114,3 +1114,18 @@ the saved conversation used the Eddie preset. Checked counts and preset
 only, without reading conversation contents from the database. Proxmox
 listed eddie.good (314, stopped) and eddie (4242, running). Neither VM
 was removed.
+
+## 2026-11-22 — Production Eddie rebuild on VM 314
+
+Author: OpenAI Codex
+
+After Joy's confirmation, verified trusted LDAPS from test Eddie to IPA on
+636. Joy enabled a runtime and permanent IPv4 firewalld rule for
+192.168.42.0/24 on IPA VM 204. Revisit that rule during IPA playbook work.
+No backups were found on the reachable Proxmox stores; PBS was unreachable.
+Confirmed eddie.good (314, stopped) and test Eddie (4242, running), shut down
+4242 cleanly and destroyed both confirmed VMs. Verified their IDs were clear
+before starting production Eddie as 314 from draft PR #23 commit 483ea75.
+Joy withdrew the additional IPA record deletion request. The production
+playbook was briefly paused while inspecting the existing IPA record, then
+resumed without deleting any IPA objects.
