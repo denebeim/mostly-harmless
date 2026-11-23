@@ -159,6 +159,35 @@
   no_log: true
   changed_when: false
 
+- name: Read current FreeIPA discovery records from local BIND9
+  ansible.builtin.command:
+    argv:
+      - dig
+      - "@127.0.0.1"
+      - +short
+      - +norecurse
+      - "{{ item.name }}.{{ bind9_domain_name }}."
+      - "{{ item.type }}"
+  loop: "{{ bind9_ipa_discovery_records }}"
+  register: bind9_ipa_discovery_answers
+  changed_when: false
+  when: bind9_cutover_pihole | bool
+
+- name: Add missing FreeIPA discovery records to the dynamic zone
+  ansible.builtin.command:
+    argv: [nsupdate]
+    stdin: |
+      server 127.0.0.1
+      zone {{ bind9_domain_name }}.
+      key hmac-sha256:{{ bind9_ddns_key_name }} {{ bind9_ddns_key_secret }}
+      update add {{ item.item.name }}.{{ bind9_domain_name }}. 300 {{ item.item.type }} {{ item.item.data }}
+      send
+  loop: "{{ bind9_ipa_discovery_answers.results }}"
+  when:
+    - bind9_cutover_pihole | bool
+    - item.item.data not in item.stdout_lines
+  no_log: true
+
 - name: Save current hosts.csv as managed state for future cleanup
   ansible.builtin.copy:
     src: hosts.csv
