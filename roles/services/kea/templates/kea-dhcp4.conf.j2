@@ -40,6 +40,12 @@
             "client-class": "user_machines"
           },
           {
+{% for pool in kea_extra_user_pools %}
+            "pool": "{{ pool }}",
+            "client-class": "user_machines"
+          },
+          {
+{% endfor %}
             "pool": "{{ kea_vm_pool }}",
             "client-class": "vm_clients"
           }

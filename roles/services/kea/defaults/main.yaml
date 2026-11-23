@@ -5,6 +5,11 @@ kea_lan_subnet: 192.168.42.0/24
 kea_lan_prefix: "192.168.42."
 kea_lan_router: 192.168.42.1
 kea_user_pool: "192.168.42.70 - 192.168.42.99"
+# The legacy DHCP range excludes the tracked freenas and eddie addresses.
+kea_extra_user_pools:
+  - "192.168.42.100 - 192.168.42.114"
+  - "192.168.42.116 - 192.168.42.131"
+  - "192.168.42.133 - 192.168.42.199"
 kea_vm_pool: "192.168.42.200 - 192.168.42.239"
 kea_iot_subnet: 192.168.43.0/24
 kea_iot_prefix: "192.168.43."
