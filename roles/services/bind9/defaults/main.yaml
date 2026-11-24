@@ -3,3 +3,4 @@ bind9_domain_name: local.deepthot.org
 bind9_ddns_key_name: kea-ddns-key
 bind9_ddns_key_secret: "{{ lookup('ansible.builtin.env', 'KEA_DDNS_KEY_SECRET', errors='strict') }}"
 bind9_cutover_pihole: false
+bind9_import_ipa_discovery: true

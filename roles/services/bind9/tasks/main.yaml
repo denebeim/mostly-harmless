@@ -159,6 +159,75 @@
   no_log: true
   changed_when: false
 
+- name: Optionally import discovery records from the existing FreeIPA server
+  when: bind9_import_ipa_discovery | bool
+  tags: [ipa_dns_discovery]
+  vars:
+    bind9_ipa_record_pattern: |-
+      (?m)^[ \t]+((?:_[a-z0-9-]+(?:\._(?:tcp|udp))?|ipa-ca)\.{{ bind9_domain_name | regex_escape }}\.)[ \t]+([0-9]+)[ \t]+IN[ \t]+(SRV|TXT|URI|A|AAAA)[ \t]+([^\r\n]+)$
+  block:
+    - name: Check whether BIND9 is running
+      ansible.builtin.command:
+        argv: [systemctl, is-active, bind9]
+      register: bind9_ipa_named
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Report when BIND9 is not running
+      ansible.builtin.debug:
+        msg: Skipping FreeIPA DNS import because BIND9 is not running.
+      when: bind9_ipa_named.rc != 0
+
+    - name: Fetch the FreeIPA DNS dry-run export from the controller
+      ansible.builtin.command:
+        argv: [ipa, dns-update-system-records, --dry-run]
+      delegate_to: localhost
+      become: false
+      register: bind9_ipa_export
+      when: bind9_ipa_named.rc == 0
+      changed_when: false
+      failed_when: false
+
+    - name: Select FreeIPA discovery records in the local zone
+      ansible.builtin.set_fact:
+        bind9_ipa_records: >-
+          {{ bind9_ipa_export.stdout | default('')
+             | regex_findall(bind9_ipa_record_pattern) }}
+
+    - name: Report when FreeIPA discovery import is skipped
+      ansible.builtin.debug:
+        msg: >-
+          Skipping FreeIPA DNS import. The controller needs a reachable IPA
+          server, the ipa client, and a valid Kerberos ticket. Existing DNS
+          records are preserved.
+      when:
+        - bind9_ipa_named.rc == 0
+        - bind9_ipa_export.rc | default(1) != 0 or not bind9_ipa_records
+
+    - name: Read the current FreeIPA discovery answers from local BIND9
+      ansible.builtin.command:
+        argv: [dig, "@127.0.0.1", +short, +norecurse, "{{ item[0] }}", "{{ item[2] }}"]
+      loop: "{{ bind9_ipa_records }}"
+      register: bind9_ipa_answers
+      changed_when: false
+      when: bind9_ipa_export.rc | default(1) == 0
+
+    - name: Add missing FreeIPA discovery answers to the dynamic zone
+      ansible.builtin.command:
+        argv: [nsupdate]
+        stdin: |
+          server 127.0.0.1
+          zone {{ bind9_domain_name }}.
+          key hmac-sha256:{{ bind9_ddns_key_name }} {{ bind9_ddns_key_secret }}
+          update add {{ item.item[0] }} {{ item.item[1] }} {{ item.item[2] }} {{ item.item[3] }}
+          send
+      loop: "{{ bind9_ipa_answers.results | default([]) }}"
+      when:
+        - not (item.skipped | default(false))
+        - item.item[3] not in item.stdout_lines
+      no_log: true
+
 - name: Save current hosts.csv as managed state for future cleanup
   ansible.builtin.copy:
     src: hosts.csv
