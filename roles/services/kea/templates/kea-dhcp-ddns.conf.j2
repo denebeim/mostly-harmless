@@ -15,7 +15,7 @@
           "name": "{{ kea_domain_name }}.",
           "key-name": "{{ kea_ddns_key_name }}",
           "dns-servers": [
-            { "ip-address": "127.0.0.1", "port": 53 }
+            { "ip-address": "127.0.0.1", "port": {{ kea_ddns_dns_port | int }} }
           ]
         }
       ]
@@ -26,14 +26,14 @@
           "name": "42.168.192.in-addr.arpa.",
           "key-name": "{{ kea_ddns_key_name }}",
           "dns-servers": [
-            { "ip-address": "127.0.0.1", "port": 53 }
+            { "ip-address": "127.0.0.1", "port": {{ kea_ddns_dns_port | int }} }
           ]
         },
         {
           "name": "43.168.192.in-addr.arpa.",
           "key-name": "{{ kea_ddns_key_name }}",
           "dns-servers": [
-            { "ip-address": "127.0.0.1", "port": 53 }
+            { "ip-address": "127.0.0.1", "port": {{ kea_ddns_dns_port | int }} }
           ]
         }
       ]

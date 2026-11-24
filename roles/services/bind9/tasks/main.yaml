@@ -30,6 +30,21 @@
       {{ item.ip }} {{ item.name }}.{{ bind9_domain_name }} {{ item.name }}
       {% endfor %}
 
+- name: Set BIND9 listener port in the existing options file
+  ansible.builtin.lineinfile:
+    path: /etc/bind/named.conf.options
+    regexp: '^\s*{{ item.directive }}\s+(?:port\s+\d+\s+)?\{'
+    insertbefore: '^};'
+    line: "    {{ item.directive }}{{ item.port }} { {{ item.address }}; };"
+  loop:
+    - directive: listen-on
+      port: " port {{ bind9_dns_port | int }}"
+      address: "{{ '127.0.0.1' if bind9_dns_loopback_only | bool else 'any' }}"
+    - directive: listen-on-v6
+      port: "{{ '' if bind9_dns_loopback_only | bool else ' port ' ~ (bind9_dns_port | int | string) }}"
+      address: "{{ 'none' if bind9_dns_loopback_only | bool else 'any' }}"
+  notify: Reload bind9
+
 - name: Deploy BIND9 named.conf.local
   ansible.builtin.template:
     src: named.conf.local.j2
@@ -57,9 +72,8 @@
   ansible.builtin.command: named-checkconf
   changed_when: false
 
-- name: Gather service facts before optional Pi-hole cutover
+- name: Gather service facts before BIND9 activation
   ansible.builtin.service_facts:
-  when: bind9_cutover_pihole | bool
 
 - name: Stop and disable Pi-hole FTL during authorized cutover
   ansible.builtin.systemd:
@@ -68,6 +82,7 @@
     state: stopped
   when:
     - bind9_cutover_pihole | bool
+    - bind9_dns_port | int == 53
     - "'pihole-FTL.service' in ansible_facts.services"
 
 - name: Enable and start bind9
@@ -76,6 +91,12 @@
     enabled: true
     state: started
   when: bind9_cutover_pihole | bool
+
+- name: Apply BIND9 listener changes before updating DNS records
+  ansible.builtin.meta: flush_handlers
+  when: >-
+    bind9_cutover_pihole | bool
+    or (ansible_facts.services.get('named.service', {}).get('state') == 'running')
 
 - name: Check for previously managed hosts state file
   ansible.builtin.stat:
@@ -94,7 +115,7 @@
 - name: Remove obsolete static A records no longer in hosts.csv
   ansible.builtin.shell: |
     nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
-    server 127.0.0.1
+    server 127.0.0.1 {{ bind9_dns_port | int }}
     zone {{ bind9_domain_name }}.
     update delete {{ item.name }}.{{ bind9_domain_name }}. A
     send
@@ -119,7 +140,7 @@
 - name: Remove obsolete static PTR records for removed or renumbered IPs
   ansible.builtin.shell: |
     nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
-    server 127.0.0.1
+    server 127.0.0.1 {{ bind9_dns_port | int }}
     zone {{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa.
     update delete {{ item.ip.split('.')[3] }}.{{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa. PTR
     send
@@ -144,7 +165,7 @@
 - name: Reconcile static hosts.csv A and PTR records via TSIG-authenticated nsupdate
   ansible.builtin.shell: |
     nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
-    server 127.0.0.1
+    server 127.0.0.1 {{ bind9_dns_port | int }}
     zone {{ bind9_domain_name }}.
     update delete {{ item.name }}.{{ bind9_domain_name }}. A
     update add {{ item.name }}.{{ bind9_domain_name }}. 300 A {{ item.ip }}
@@ -207,7 +228,7 @@
 
     - name: Read the current FreeIPA discovery answers from local BIND9
       ansible.builtin.command:
-        argv: [dig, "@127.0.0.1", +short, +norecurse, "{{ item[0] }}", "{{ item[2] }}"]
+        argv: [dig, "@127.0.0.1", -p, "{{ bind9_dns_port | int }}", +short, +norecurse, "{{ item[0] }}", "{{ item[2] }}"]
       loop: "{{ bind9_ipa_records }}"
       register: bind9_ipa_answers
       changed_when: false
@@ -217,7 +238,7 @@
       ansible.builtin.command:
         argv: [nsupdate]
         stdin: |
-          server 127.0.0.1
+          server 127.0.0.1 {{ bind9_dns_port | int }}
           zone {{ bind9_domain_name }}.
           key hmac-sha256:{{ bind9_ddns_key_name }} {{ bind9_ddns_key_secret }}
           update add {{ item.item[0] }} {{ item.item[1] }} {{ item.item[2] }} {{ item.item[3] }}
