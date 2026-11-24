@@ -1,0 +1,13 @@
+$TTL 300
+@   IN  SOA services.{{ bind9_domain_name }}. hostmaster.{{ bind9_domain_name }}. (
+        2026112101 ; Serial
+        3600       ; Refresh
+        900        ; Retry
+        604800     ; Expire
+        300 )      ; Negative Cache TTL
+;
+@   IN  NS  services.{{ bind9_domain_name }}.
+
+{% for h in isc_hosts_list | selectattr('ip', 'match', '^192\\.168\\.42\\.') | list %}
+{{ h.ip.split('.')[-1] }}    IN  PTR {{ h.name }}.{{ bind9_domain_name }}.
+{% endfor %}

@@ -1,0 +1,48 @@
+---
+- ansible.builtin.import_playbook: vm.yaml
+  vars:
+    vm:
+      name: services
+      id: 202
+      ip: &services_ip 192.168.42.2
+      memory: 2048
+      cores: 2
+      disk: 16G
+      update_packages: false
+      tags: []
+
+- name: Configure foundational DNS and DHCP services on services
+  hosts: services
+  become: true
+  gather_facts: true
+  vars:
+    services_bind_dns_port: 5353
+    bind9_dns_port: "{{ services_bind_dns_port }}"
+    bind9_dns_loopback_only: "{{ services_bind_dns_port | int != 53 }}"
+    kea_ddns_dns_port: "{{ services_bind_dns_port }}"
+    services_dns_servers:
+      - *services_ip
+      - 1.1.1.1
+      - 8.8.8.8
+    services_dns_search:
+      - "{{ bind9_domain_name }}"
+      - deepthot.org
+      - deepthot.aa
+  pre_tasks:
+    - name: Set the static resolver configuration before installing DNS packages
+      ansible.builtin.copy:
+        dest: /etc/resolv.conf
+        content: |
+          # Managed by Ansible in services.yaml
+          search {{ services_dns_search | join(' ') }}
+          {% for server in services_dns_servers %}
+          nameserver {{ server }}
+          {% endfor %}
+        owner: root
+        group: root
+        mode: "0644"
+        follow: false
+        backup: true
+  roles:
+    - role: services/bind9
+    - role: services/kea

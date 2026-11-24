@@ -1,0 +1,259 @@
+---
+- name: Read host and reservation inventory from hosts.csv
+  ansible.builtin.set_fact:
+    isc_hosts_list: >-
+      {{
+        lookup('ansible.builtin.file', 'hosts.csv').splitlines()[1:]
+        | select('truthy')
+        | map('split', ',')
+        | map('zip', ['name', 'ip', 'mac', 'in_etc_hosts', 'zone_group'])
+        | map('map', 'reverse')
+        | map('community.general.dict')
+        | list
+      }}
+
+- name: Install ISC BIND9 packages
+  ansible.builtin.apt:
+    name:
+      - bind9
+      - bind9utils
+      - dnsutils
+    state: present
+    update_cache: true
+
+- name: Manage low-level system hosts block in /etc/hosts
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} ANSIBLE MANAGED DEEPTHOT SYSTEM HOSTS"
+    block: |
+      {% for item in isc_hosts_list | selectattr('in_etc_hosts', 'equalto', 'true') | list %}
+      {{ item.ip }} {{ item.name }}.{{ bind9_domain_name }} {{ item.name }}
+      {% endfor %}
+
+- name: Set BIND9 listener port in the existing options file
+  ansible.builtin.lineinfile:
+    path: /etc/bind/named.conf.options
+    regexp: '^\s*{{ item.directive }}\s+(?:port\s+\d+\s+)?\{'
+    insertbefore: '^};'
+    line: "    {{ item.directive }}{{ item.port }} { {{ item.address }}; };"
+  loop:
+    - directive: listen-on
+      port: " port {{ bind9_dns_port | int }}"
+      address: "{{ '127.0.0.1' if bind9_dns_loopback_only | bool else 'any' }}"
+    - directive: listen-on-v6
+      port: "{{ '' if bind9_dns_loopback_only | bool else ' port ' ~ (bind9_dns_port | int | string) }}"
+      address: "{{ 'none' if bind9_dns_loopback_only | bool else 'any' }}"
+  notify: Reload bind9
+
+- name: Deploy BIND9 named.conf.local
+  ansible.builtin.template:
+    src: named.conf.local.j2
+    dest: /etc/bind/named.conf.local
+    owner: root
+    group: bind
+    mode: "0640"
+  notify: Reload bind9
+
+- name: Deploy initial BIND9 forward and reverse zone files (preserve DDNS journals)
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: bind
+    group: bind
+    mode: "0644"
+    force: false
+  loop:
+    - { src: db.local.deepthot.org.j2, dest: /var/lib/bind/db.local.deepthot.org }
+    - { src: db.192.168.42.j2, dest: /var/lib/bind/db.192.168.42 }
+    - { src: db.192.168.43.j2, dest: /var/lib/bind/db.192.168.43 }
+  notify: Reload bind9
+
+- name: Validate BIND9 configuration
+  ansible.builtin.command: named-checkconf
+  changed_when: false
+
+- name: Gather service facts before BIND9 activation
+  ansible.builtin.service_facts:
+
+- name: Stop and disable Pi-hole FTL during authorized cutover
+  ansible.builtin.systemd:
+    name: pihole-FTL
+    enabled: false
+    state: stopped
+  when:
+    - bind9_cutover_pihole | bool
+    - bind9_dns_port | int == 53
+    - "'pihole-FTL.service' in ansible_facts.services"
+
+- name: Enable and start bind9
+  ansible.builtin.systemd:
+    name: bind9
+    enabled: true
+    state: started
+  when: bind9_cutover_pihole | bool
+
+- name: Apply BIND9 listener changes before updating DNS records
+  ansible.builtin.meta: flush_handlers
+  when: >-
+    bind9_cutover_pihole | bool
+    or (ansible_facts.services.get('named.service', {}).get('state') == 'running')
+
+- name: Check for previously managed hosts state file
+  ansible.builtin.stat:
+    path: /var/lib/bind/managed-hosts.csv
+  register: bind9_prev_hosts_stat
+  when: bind9_cutover_pihole | bool
+
+- name: Read previously managed hosts from state file
+  ansible.builtin.slurp:
+    src: /var/lib/bind/managed-hosts.csv
+  register: bind9_prev_hosts_slurp
+  when:
+    - bind9_cutover_pihole | bool
+    - bind9_prev_hosts_stat.stat.exists
+
+- name: Remove obsolete static A records no longer in hosts.csv
+  ansible.builtin.shell: |
+    nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
+    server 127.0.0.1 {{ bind9_dns_port | int }}
+    zone {{ bind9_domain_name }}.
+    update delete {{ item.name }}.{{ bind9_domain_name }}. A
+    send
+    EOF
+  loop: >-
+    {{
+      (bind9_prev_hosts_slurp.content | b64decode).splitlines()[1:]
+      | select('truthy')
+      | map('split', ',')
+      | map('zip', ['name', 'ip', 'mac', 'in_etc_hosts', 'zone_group'])
+      | map('map', 'reverse')
+      | map('community.general.dict')
+      | rejectattr('name', 'in', isc_hosts_list | map(attribute='name') | list)
+      | list
+    }}
+  when:
+    - bind9_cutover_pihole | bool
+    - bind9_prev_hosts_stat.stat.exists
+  no_log: true
+  changed_when: false
+
+- name: Remove obsolete static PTR records for removed or renumbered IPs
+  ansible.builtin.shell: |
+    nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
+    server 127.0.0.1 {{ bind9_dns_port | int }}
+    zone {{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa.
+    update delete {{ item.ip.split('.')[3] }}.{{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa. PTR
+    send
+    EOF
+  loop: >-
+    {{
+      (bind9_prev_hosts_slurp.content | b64decode).splitlines()[1:]
+      | select('truthy')
+      | map('split', ',')
+      | map('zip', ['name', 'ip', 'mac', 'in_etc_hosts', 'zone_group'])
+      | map('map', 'reverse')
+      | map('community.general.dict')
+      | rejectattr('ip', 'in', isc_hosts_list | map(attribute='ip') | list)
+      | list
+    }}
+  when:
+    - bind9_cutover_pihole | bool
+    - bind9_prev_hosts_stat.stat.exists
+  no_log: true
+  changed_when: false
+
+- name: Reconcile static hosts.csv A and PTR records via TSIG-authenticated nsupdate
+  ansible.builtin.shell: |
+    nsupdate -y "hmac-sha256:{{ bind9_ddns_key_name }}:{{ bind9_ddns_key_secret }}" <<'EOF'
+    server 127.0.0.1 {{ bind9_dns_port | int }}
+    zone {{ bind9_domain_name }}.
+    update delete {{ item.name }}.{{ bind9_domain_name }}. A
+    update add {{ item.name }}.{{ bind9_domain_name }}. 300 A {{ item.ip }}
+    send
+    zone {{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa.
+    update delete {{ item.ip.split('.')[3] }}.{{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa. PTR
+    update add {{ item.ip.split('.')[3] }}.{{ item.ip.split('.')[2] }}.{{ item.ip.split('.')[1] }}.{{ item.ip.split('.')[0] }}.in-addr.arpa. 300 PTR {{ item.name }}.{{ bind9_domain_name }}.
+    send
+    EOF
+  loop: "{{ isc_hosts_list }}"
+  when: bind9_cutover_pihole | bool
+  no_log: true
+  changed_when: false
+
+- name: Optionally import discovery records from the existing FreeIPA server
+  when: bind9_import_ipa_discovery | bool
+  tags: [ipa_dns_discovery]
+  vars:
+    bind9_ipa_record_pattern: |-
+      (?m)^[ \t]+((?:_[a-z0-9-]+(?:\._(?:tcp|udp))?|ipa-ca)\.{{ bind9_domain_name | regex_escape }}\.)[ \t]+([0-9]+)[ \t]+IN[ \t]+(SRV|TXT|URI|A|AAAA)[ \t]+([^\r\n]+)$
+  block:
+    - name: Check whether BIND9 is running
+      ansible.builtin.command:
+        argv: [systemctl, is-active, bind9]
+      register: bind9_ipa_named
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Report when BIND9 is not running
+      ansible.builtin.debug:
+        msg: Skipping FreeIPA DNS import because BIND9 is not running.
+      when: bind9_ipa_named.rc != 0
+
+    - name: Fetch the FreeIPA DNS dry-run export from the controller
+      ansible.builtin.command:
+        argv: [ipa, dns-update-system-records, --dry-run]
+      delegate_to: localhost
+      become: false
+      register: bind9_ipa_export
+      when: bind9_ipa_named.rc == 0
+      changed_when: false
+      failed_when: false
+
+    - name: Select FreeIPA discovery records in the local zone
+      ansible.builtin.set_fact:
+        bind9_ipa_records: >-
+          {{ bind9_ipa_export.stdout | default('')
+             | regex_findall(bind9_ipa_record_pattern) }}
+
+    - name: Report when FreeIPA discovery import is skipped
+      ansible.builtin.debug:
+        msg: >-
+          Skipping FreeIPA DNS import. The controller needs a reachable IPA
+          server, the ipa client, and a valid Kerberos ticket. Existing DNS
+          records are preserved.
+      when:
+        - bind9_ipa_named.rc == 0
+        - bind9_ipa_export.rc | default(1) != 0 or not bind9_ipa_records
+
+    - name: Read the current FreeIPA discovery answers from local BIND9
+      ansible.builtin.command:
+        argv: [dig, "@127.0.0.1", -p, "{{ bind9_dns_port | int }}", +short, +norecurse, "{{ item[0] }}", "{{ item[2] }}"]
+      loop: "{{ bind9_ipa_records }}"
+      register: bind9_ipa_answers
+      changed_when: false
+      when: bind9_ipa_export.rc | default(1) == 0
+
+    - name: Add missing FreeIPA discovery answers to the dynamic zone
+      ansible.builtin.command:
+        argv: [nsupdate]
+        stdin: |
+          server 127.0.0.1 {{ bind9_dns_port | int }}
+          zone {{ bind9_domain_name }}.
+          key hmac-sha256:{{ bind9_ddns_key_name }} {{ bind9_ddns_key_secret }}
+          update add {{ item.item[0] }} {{ item.item[1] }} {{ item.item[2] }} {{ item.item[3] }}
+          send
+      loop: "{{ bind9_ipa_answers.results | default([]) }}"
+      when:
+        - not (item.skipped | default(false))
+        - item.item[3] not in item.stdout_lines
+      no_log: true
+
+- name: Save current hosts.csv as managed state for future cleanup
+  ansible.builtin.copy:
+    src: hosts.csv
+    dest: /var/lib/bind/managed-hosts.csv
+    owner: bind
+    group: bind
+    mode: "0644"
+  when: bind9_cutover_pihole | bool

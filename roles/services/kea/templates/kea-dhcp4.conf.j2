@@ -1,0 +1,84 @@
+{
+  "Dhcp4": {
+    "interfaces-config": {
+      "interfaces": [ "*" ]
+    },
+    "lease-database": {
+      "type": "memfile",
+      "persist": true,
+      "name": "/var/lib/kea/kea-leases4.csv"
+    },
+    "valid-lifetime": 3600,
+    "renew-timer": 1800,
+    "rebind-timer": 3150,
+    "ddns-send-updates": true,
+    "ddns-qualifying-suffix": "{{ kea_domain_name }}",
+    "dhcp-ddns": {
+      "enable-updates": true
+    },
+    "client-classes": [
+      {
+        "name": "vm_clients",
+        "test": "substring(pkt4.mac, 0, 3) == 0x525400 or substring(pkt4.mac, 0, 3) == 0xbc2411 or substring(pkt4.mac, 0, 3) == 0x00163e"
+      },
+      {
+        "name": "iot_devices",
+        "test": "substring(pkt4.mac, 0, 3) == 0x240ac4 or substring(pkt4.mac, 0, 3) == 0xecfabc"
+      },
+      {
+        "name": "user_machines",
+        "test": "not member('vm_clients') and not member('iot_devices')"
+      }
+    ],
+    "subnet4": [
+      {
+        "id": 1,
+        "subnet": "{{ kea_lan_subnet }}",
+        "pools": [
+          {
+            "pool": "{{ kea_user_pool }}",
+            "client-class": "user_machines"
+          },
+          {
+            "pool": "{{ kea_vm_pool }}",
+            "client-class": "vm_clients"
+          }
+        ],
+        "option-data": [
+          { "name": "routers", "data": "{{ kea_lan_router }}" },
+          { "name": "domain-name-servers", "data": "{{ kea_dns_server }}" },
+          { "name": "ntp-servers", "data": "{{ kea_ntp_server }}" },
+          { "name": "domain-name", "data": "{{ kea_domain_name }}" },
+          { "name": "domain-search", "data": "{{ kea_domain_name }}" }
+        ],
+        "reservations": [
+{% for h in isc_hosts_list | selectattr('mac', 'truthy') | selectattr('ip', 'match', '^' ~ (kea_lan_prefix | regex_escape)) | list %}
+          { "hw-address": "{{ h.mac }}", "ip-address": "{{ h.ip }}", "hostname": "{{ h.name }}" }{{ "," if not loop.last else "" }}
+{% endfor %}
+        ]
+      },
+      {
+        "id": 2,
+        "subnet": "{{ kea_iot_subnet }}",
+        "pools": [
+          {
+            "pool": "{{ kea_iot_pool }}",
+            "client-class": "iot_devices"
+          }
+        ],
+        "option-data": [
+          { "name": "routers", "data": "{{ kea_iot_router }}" },
+          { "name": "domain-name-servers", "data": "{{ kea_dns_server }}" },
+          { "name": "ntp-servers", "data": "{{ kea_ntp_server }}" },
+          { "name": "domain-name", "data": "{{ kea_domain_name }}" },
+          { "name": "domain-search", "data": "{{ kea_domain_name }}" }
+        ],
+        "reservations": [
+{% for h in isc_hosts_list | selectattr('mac', 'truthy') | selectattr('ip', 'match', '^' ~ (kea_iot_prefix | regex_escape)) | list %}
+          { "hw-address": "{{ h.mac }}", "ip-address": "{{ h.ip }}", "hostname": "{{ h.name }}" }{{ "," if not loop.last else "" }}
+{% endfor %}
+        ]
+      }
+    ]
+  }
+}

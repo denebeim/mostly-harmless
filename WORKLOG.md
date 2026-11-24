@@ -966,3 +966,17 @@ Placed today's authorship rules, portable handoff and draft-preparation entries
 on the local work-log branch. Recorded frequent local commits by the agent and
 GitHub pushes by the owner, especially for AI handoffs. Preserved the explicit
 review and approval requirement for main integration.
+
+## 2026-11-20 — ISC BIND9 and Kea DHCPv4/DDNS prototype on testservices
+
+Author: Zoo
+
+- Created branch `gemini/isc-dhcp-dns` and subdirectory `ai-twiddles/gemini/isc-services/`.
+- Spun up `testservices` (VM 8315, `192.168.42.202`, `tags: [ipa]`) using `vm.yaml` via `ai-twiddles/gemini/isc-services/testservices.yaml`.
+- Populated `isc_services.yaml` and `kea-dhcp4.conf.j2` from `/etc/pihole/pihole.toml` on `services` (`192.168.42.2`), preserving user-owned machine IPs (`giles` `.98`, `willow` `.99`) and configuring the 20-IP `user_machines` pool at `192.168.42.70 - 192.168.42.99`, `vm_clients` at `.200 - .239`, and IoT VLAN `192.168.43.0/24` at `.100 - .250`.
+- Verified on `testservices`: `named-checkconf`, `kea-dhcp4 -t`, and `kea-dhcp-ddns -t` passed; `bind9`, `kea-dhcp4-server`, and `kea-dhcp-ddns-server` are active and enabled (`ok=10 changed=2 failed=0`).
+- Note for future IP renumbering: `valheim` (`.123`) is a game server and belongs in the **Applications** group; `plex` (`.186`) and `arr` (`.131`) belong in their own **Media** group. Both are currently up and should be moved when we get to them.
+- Next: review reverse zone files (`db.192.168.42`, `db.192.168.43`), inventory `/etc/pihole/dhcp.leases` on `services` (via `ansible` credentials), and refine actual IoT/user MAC OUI lists.
+- Future project note (owner direction): IoT sandboxing needs to be fleshed out in Future Projects—most IoT devices are on Wi-Fi, while Zigbee/Philips Hue can be isolated more easily; deferred for later engineering.
+- Architecture & PR #20 review (2026-11-21, `Author: Zoo`): Split `roles/services/isc_dns_dhcp` into `roles/services/bind9` and `roles/services/kea`, declared explicitly in `services.yaml` (`tags: []`, no IPA/DNS/DHCP bootstrap dependency). Gated `bind9` and `kea` service startup on `bind9_cutover_pihole` / `kea_cutover_pihole` (default `false`), added `PTR` reconciliation to `nsupdate`, and replaced `failed_when: false` on `pihole-FTL` stop with `service_facts` check.
+- IPA DNS note (2026-11-21, `Author: Zoo`): `services` (`192.168.42.2`) currently serves `_kerberos._tcp.local.deepthot.org` SRV records while `ipa` (`192.168.42.4`) is not serving DNS externally. Owner direction: `services` (BIND9) should be the primary DNS node and `ipa` the secondary (with FreeIPA SRV records served by `services` and optional AXFR to `ipa`), to be addressed when we get to the IPA automation.
