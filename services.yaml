@@ -4,7 +4,7 @@
     vm:
       name: services
       id: 202
-      ip: 192.168.42.2
+      ip: &services_ip 192.168.42.2
       memory: 2048
       cores: 2
       disk: 16G
@@ -15,6 +15,30 @@
   hosts: services
   become: true
   gather_facts: true
+  vars:
+    services_dns_servers:
+      - *services_ip
+      - 1.1.1.1
+      - 8.8.8.8
+    services_dns_search:
+      - "{{ bind9_domain_name }}"
+      - deepthot.org
+      - deepthot.aa
+  pre_tasks:
+    - name: Set the static resolver configuration before installing DNS packages
+      ansible.builtin.copy:
+        dest: /etc/resolv.conf
+        content: |
+          # Managed by Ansible in services.yaml
+          search {{ services_dns_search | join(' ') }}
+          {% for server in services_dns_servers %}
+          nameserver {{ server }}
+          {% endfor %}
+        owner: root
+        group: root
+        mode: "0644"
+        follow: false
+        backup: true
   roles:
     - role: services/bind9
     - role: services/kea
