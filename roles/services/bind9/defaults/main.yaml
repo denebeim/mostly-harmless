@@ -3,13 +3,4 @@ bind9_domain_name: local.deepthot.org
 bind9_ddns_key_name: kea-ddns-key
 bind9_ddns_key_secret: "{{ lookup('ansible.builtin.env', 'KEA_DDNS_KEY_SECRET', errors='strict') }}"
 bind9_cutover_pihole: false
-bind9_ipa_server: "ipa.{{ bind9_domain_name }}."
-bind9_ipa_discovery_records:
-  - { name: _kerberos._tcp, type: SRV, data: "0 0 88 {{ bind9_ipa_server }}" }
-  - { name: _kerberos._udp, type: SRV, data: "0 0 88 {{ bind9_ipa_server }}" }
-  - { name: _kerberos-master._tcp, type: SRV, data: "0 0 88 {{ bind9_ipa_server }}" }
-  - { name: _kerberos-master._udp, type: SRV, data: "0 0 88 {{ bind9_ipa_server }}" }
-  - { name: _kpasswd._tcp, type: SRV, data: "0 0 464 {{ bind9_ipa_server }}" }
-  - { name: _kpasswd._udp, type: SRV, data: "0 0 464 {{ bind9_ipa_server }}" }
-  - { name: _ldap._tcp, type: SRV, data: "0 0 389 {{ bind9_ipa_server }}" }
-  - { name: _kerberos, type: TXT, data: '"{{ bind9_domain_name | upper }}"' }
+bind9_import_ipa_discovery: "{{ bind9_cutover_pihole }}"
