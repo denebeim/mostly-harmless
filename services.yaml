@@ -16,6 +16,10 @@
   become: true
   gather_facts: true
   vars:
+    services_bind_dns_port: 5353
+    bind9_dns_port: "{{ services_bind_dns_port }}"
+    bind9_dns_loopback_only: "{{ services_bind_dns_port | int != 53 }}"
+    kea_ddns_dns_port: "{{ services_bind_dns_port }}"
     services_dns_servers:
       - *services_ip
       - 1.1.1.1

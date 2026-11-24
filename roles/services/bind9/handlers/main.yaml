@@ -3,3 +3,6 @@
   ansible.builtin.systemd:
     name: bind9
     state: reloaded
+  when: >-
+    bind9_cutover_pihole | bool
+    or (ansible_facts.services.get('named.service', {}).get('state') == 'running')
