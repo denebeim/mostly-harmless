@@ -1150,3 +1150,20 @@ its containers and network, retained its volume and instance secret file,
 and converged on a second run. Full disposable Proxmox rebuild and
 interactive SSO acceptance remain pending. No deployment changes made to
 Eddie or Authentik. Joy performs both merges. Issue #36 is deferred.
+
+### Sourcery follow-up
+
+Author: OpenAI Codex
+
+Pushed 5e944b0 to PR #23. The tagged deployment now requires an explicit
+opt-in for the HTTP pilot, passes Authentik's advertised issuer to LibreChat,
+and supports the delegated Authentik account's sudo-only Docker access.
+Documented first-sign-in provisioning and a local HTTPS recovery account.
+The temporary per-VM renewal helper stays until the planned DMZ TLS cutover.
+Serial deployments and tag edits outside a run remain the operator workflow.
+
+Ansible syntax, 15 unit tests, and the tagged HTTP refusal check passed.
+The direct Authentik discovery response on Services advertised the expected
+issuer. The configured HTTPS address could not be reached from Eddie or
+Benjymouse during this check. Interactive SSO and recovery logins remain
+pending. Production was not changed.
