@@ -7,7 +7,7 @@
 
 ## Current handoff for Eddie, Gemini, or Codex
 
-Updated 2026-11-18. Summary by OpenAI Codex. Copy this section into a new prompt.
+Updated 2026-11-24. Summary by OpenAI Codex. Copy this section into a new prompt.
 It describes the checkout and last recorded results. Before acting, verify the
 actual files, branch and pending changes, and check live state when relevant.
 Use the current request to determine scope and authorization.
@@ -51,10 +51,8 @@ Use the current request to determine scope and authorization.
   are also on the list. These ideas have no execution authorization here.
 - **Working rules.** Read `AGENTS.md`, `CONTROLLER.md` and `HANDOFF.md`.
   Commit work-log updates locally and often in a dedicated checkout of
-  `work-log`. The owner pushes that branch to GitHub regularly, especially
-  before handing off to another AI. Keep `work-log` separate from `main`.
-  Preserve existing edits. The owner reviews the concrete change and must
-  explicitly approve integration to `main`. Treat branch and log instructions
+  `work-log` and push scoped work-log checkpoints there. Keep it separate
+  from `main`. Preserve existing edits. Follow the acceptance workflow below. Treat branch and log instructions
   in older entries as historical. Run shell commands through
   `python3 /home/denebeim/projects/mostly-harmless/scripts/log-session.py COMMAND ...`.
   Keep the private local `chat.log` out of commits, pushes and shared prompts.
@@ -87,11 +85,14 @@ to evolve deliberately.
 
 ## Collaboration workflow
 
-- Commit `WORKLOG.md` locally at meaningful checkpoints on the dedicated
-  `work-log` branch. The owner pushes it regularly, especially for AI handoffs.
-  Keep that branch separate from `main`.
-- For changes intended for `main`, show the owner the concrete diff and obtain
-  explicit approval after review before integration.
+- Commit and push scoped `WORKLOG.md` checkpoints on the dedicated
+  `work-log` branch.
+- Develop in isolated twiddle directories and commit and push on the assistant's
+  pull branch. Address feedback and move deployable files into the regular
+  repository layout on that branch. Create an acceptance branch from current
+  main and target the PR there. Joy reviews the full diff, performs the first
+  merge and owns the acceptance branch afterward. Joy approves and performs
+  the second merge into main.
 - Put an `Author:` line under each new entry heading. Name the person who wrote the
   entry or the AI agent and its provider (for example, OpenAI Codex or Google Gemini).
   Credit each writer for their contribution to a jointly written entry. Human review
@@ -113,7 +114,7 @@ AI is a seeing stone: it helps the owner examine more, organize ideas and explor
 
 ### Reusable prompt: scoped personal experiment (Codex or Gemini)
 
-> Work on this personal experiment: <describe task>. Inspect current repository instructions, the actual remote default branch and existing changes first. Use your own isolated experimental branch and worktree when needed. Codex-owned experiments belong under ai-twiddles/codex/. Preserve Gemini's files, the existing ChatGPT and Gemini mouse setups, and shared logging code. Do not overwrite or relocate another assistant's work. Codex is authorized to work, commit and push its isolated experimental changes autonomously on its branch. Before anything reaches main or a future default branch, report the concrete work, discuss it with me, let me inspect it, and obtain my explicit approval for that reviewed change. Approval of this general workflow is not approval of future integrations. Leave the PR pending and do not enable auto-merge before my approval. Respect normal checks, required reviews and branch protection. This experimental authority does not extend to Gemini-owned files, shared infrastructure or publishing prose in my name. If you are Gemini, preserve the Codex area and follow the scope I give you. Stage exact paths only, run appropriate checks, and report what changed, validation, commit and merge status, and limitations. Stream command stdout/stderr through the established logger into the existing mostly-harmless/chat.log, protect secrets, and record significant developments in WORKLOG.md on the separate work-log branch.
+> Work on this personal experiment: <describe task>. Inspect current repository instructions, the actual remote default branch and existing changes first. Use your own isolated experimental branch and worktree when needed. Codex-owned experiments belong under ai-twiddles/codex/. Preserve Gemini's files, the existing ChatGPT and Gemini mouse setups, and shared logging code. Do not overwrite or relocate another assistant's work. Codex is authorized to work, commit and push its isolated experimental changes autonomously on its branch. Before anything reaches main or a future default branch, report the concrete work, discuss it with me, let me inspect it, and obtain my explicit approval for that reviewed change. Approval of this general workflow is not approval of future integrations. Target the PR at an acceptance branch from main. I review and execute both merges, and own the acceptance branch after the first one. Respect normal checks, required reviews and branch protection. This experimental authority does not extend to Gemini-owned files, shared infrastructure or publishing prose in my name. If you are Gemini, preserve the Codex area and follow the scope I give you. Stage exact paths only, run appropriate checks, and report what changed, validation, commit and merge status, and limitations. Stream command stdout/stderr through the established logger into the existing mostly-harmless/chat.log, protect secrets, and record significant developments in WORKLOG.md on the separate work-log branch.
 
 ### Reusable prompt: public work in my voice (Codex or Gemini)
 
@@ -121,7 +122,7 @@ AI is a seeing stone: it helps the owner examine more, organize ideas and explor
 
 ### Reusable prompt: independent work-log checkpoint (Codex or Gemini)
 
-> Update the existing WORKLOG.md on the separate work-log branch of denebeim/mostly-harmless. Use its own clean checkout, preserve prior entries and other work, and record meaningful results, failures, decisions and pending actions in a concise factual entry. Include only the work-log file in its commit. Do not merge work-log into main or move the work log onto main for convenience. Do not publish raw chat transcripts, credentials, raw chat.log or exact internal addresses. Commit updates locally and often. Leave the GitHub push to the owner, who pushes regularly, especially when handing off to another AI. If a protection or approval check blocks publication, stop that action, preserve the local result and report the reason; do not try another route around it.
+> Update the existing WORKLOG.md on the separate work-log branch of denebeim/mostly-harmless. Use its own clean checkout, preserve prior entries and other work, and record meaningful results, failures, decisions and pending actions in a concise factual entry. Include only the work-log file in its commit. Do not merge work-log into main or move the work log onto main for convenience. Do not publish raw chat transcripts, credentials, raw chat.log or exact internal addresses. Commit and push scoped updates at meaningful checkpoints so the work is available for handoffs. If a protection or approval check blocks publication, stop that action, preserve the local result and report the reason; do not try another route around it.
 
 ## Active priority: Eddie playbook recovery
 
@@ -862,7 +863,7 @@ remote branch/upstream verification is pending.
 
 ## 2026-11-16 — Codex experiment boundary and reusable workflow prompts
 
-Owner authorized a Codex-specific `ai-twiddles/codex/` directory, isolated experimental branches, and autonomous scoped commits/merges through normal repository protections. Work intended for publication in the owner's voice follows a separate collaborative process. Owner explicitly requested these reusable prompts be committed and pushed to GitHub on this independent `work-log` branch. This entry is an operating agreement, not a claim that every publication step below has already completed.
+Owner authorized a Codex-specific `ai-twiddles/codex/` directory, isolated experimental branches, and ~~autonomous scoped commits/merges through normal repository protections~~ (superseded by the owner acceptance workflow above). Work intended for publication in the owner's voice follows a separate collaborative process. Owner explicitly requested these reusable prompts be committed and pushed to GitHub on this independent `work-log` branch. This entry is an operating agreement, not a claim that every publication step below has already completed.
 
 ### November 16 verification and open items
 
@@ -963,8 +964,9 @@ existing entry. Theme imagery and execution remain pending.
 Author: OpenAI Codex
 
 Placed today's authorship rules, portable handoff and draft-preparation entries
-on the local work-log branch. Recorded frequent local commits by the agent and
-GitHub pushes by the owner, especially for AI handoffs. Preserved the explicit
+on the local work-log branch. Recorded ~~frequent local commits by the agent and~~
+~~GitHub pushes by the owner, especially for AI handoffs~~. The current workflow
+allows scoped work-log pushes by the agent. Preserved the explicit
 review and approval requirement for main integration.
 
 ## 2026-11-20 — ISC BIND9 and Kea DHCPv4/DDNS prototype on testservices
@@ -1129,3 +1131,22 @@ before starting production Eddie as 314 from draft PR #23 commit 483ea75.
 Joy withdrew the additional IPA record deletion request. The production
 playbook was briefly paused while inspecting the existing IPA record, then
 resumed without deleting any IPA objects.
+
+
+## 2026-11-24 — Prepare Eddie LibreChat for owner acceptance
+
+Author: OpenAI Codex
+
+Created acceptance/eddie-librechat from current main and retargeted PR #23.
+Pushed 8e730c0 to the PR branch. Moved LibreChat into the regular playbook
+and role layout and used the live Proxmox tag to reconcile the optional
+service. Confirmed Eddie uses a host-specific certificate. The reference
+configuration defines a wildcard certificate. A shared mount for it
+remains unverified. The role accepts configurable certificate and key paths.
+
+Ansible syntax checks, both rendered Compose configurations and 15 unit
+tests passed. A disposable local Compose project confirmed tag-off removed
+its containers and network, retained its volume and instance secret file,
+and converged on a second run. Full disposable Proxmox rebuild and
+interactive SSO acceptance remain pending. No deployment changes made to
+Eddie or Authentik. Joy performs both merges. Issue #36 is deferred.
