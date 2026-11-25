@@ -68,7 +68,24 @@ provider and bindings. Omit it when Authentik is managed independently.
 [librechat-authentik.yaml](../../librechat-authentik.yaml) can configure
 the provider independently. Restrict provider access before enabling
 first-sign-in registration. Local admin sign-in remains available and
-ordinary self-registration stays disabled.
+ordinary self-registration stays disabled. Keep a dedicated local recovery account
+and test its HTTPS login in a fresh browser session. Authentik owns normal user
+access. Removing someone from the Authentik policy does not revoke a separate
+local password or necessarily end an existing LibreChat session.
+
+On a fresh database, enable `librechat_oidc_allow_registration` after
+restricting access in Authentik so authorized users can create their
+LibreChat accounts on first sign-in. For a local recovery account or local
+pilot, use [LibreChat’s user creation script](https://www.librechat.ai/docs/configuration/authentication)
+from the deployed Compose directory:
+
+```sh
+./docker-cli compose --project-name librechat-eddie exec -w /app api npm run create-user
+```
+
+On a fresh single-tenant database, create the local recovery account first if
+it should receive the initial admin role. For an existing database, verify
+the recovery account's role and access separately.
 
 ## HTTPS
 
@@ -91,8 +108,10 @@ only when its SSH destination is configured.
 
 Nginx listens on port 443 on Eddie's LAN address with TLS 1.2 and 1.3.
 It reaches LibreChat by service name on the Compose network. MongoDB
-uses the internal database network with LibreChat. In plain HTTP mode,
-LibreChat listens on port 80 on the configured LAN address.
+uses the internal database network with LibreChat. For a trusted-LAN pilot, explicitly set
+`librechat_allow_plain_http: true` with OIDC disabled. LibreChat then listens
+on port 80 on the configured LAN address and its passwords and session
+traffic travel unencrypted. Use HTTPS for the normal Eddie deployment.
 
 ## Local inference and acceptance
 
