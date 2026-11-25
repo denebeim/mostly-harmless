@@ -1167,3 +1167,26 @@ The direct Authentik discovery response on Services advertised the expected
 issuer. The configured HTTPS address could not be reached from Eddie or
 Benjymouse during this check. Interactive SSO and recovery logins remain
 pending. Production was not changed.
+
+## 2026-11-25 — Close out Eddie LibreChat
+
+Author: OpenAI Codex
+
+Joy and Codex agreed that the Eddie LibreChat implementation and review work
+are done. PR #38 merged into the acceptance branch, then PR #39 brought those
+fixes into main at 5407f6e. Compared the LibreChat files on main with the
+reviewed diff and found no differences. The LAN DNS override on Services
+restored Authentik discovery over HTTPS from Eddie and its LibreChat
+container. Joy confirmed Authentik login in a regular and incognito browser.
+A post-merge Eddie playbook run, its no-op rerun, and interactive LibreChat
+SSO, local recovery login and Qwen reply on that revision are not recorded.
+No production playbook run is required just to close the code review.
+The LAN override needs to be carried forward when BIND9 takes the LAN listener.
+
+The next Eddie decision is whether to pursue Inkling 2 Mini. Existing issue
+#36 already tracks it. If Joy chooses to proceed, use that ticket to verify
+Linux runtime compatibility and usable inference, then update Eddie's
+opt-in profile and playbooks to persist the measured RAM and storage sizing.
+Keep Qwen as the default. Offer Inkling as a separate plain model option,
+like Plain Ollama, without applying Eddie's persona. No model or VM sizing
+changes were made for this closeout.
