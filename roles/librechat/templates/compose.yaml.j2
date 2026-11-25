@@ -1,0 +1,78 @@
+services:
+  api:
+    image: "{{ librechat_image }}"
+    restart: unless-stopped
+{% if librechat_oidc_enabled | bool %}
+    env_file:
+      - .env
+      - path: oidc.env
+        format: raw
+{% else %}
+    ports:
+      - "{{ librechat_ip }}:80:3080"
+    env_file: .env
+{% endif %}
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3080"
+      DOMAIN_CLIENT: "{{ librechat_url }}"
+      DOMAIN_SERVER: "{{ librechat_url }}"
+      MONGO_URI: mongodb://mongodb:27017/LibreChat
+      ENDPOINTS: custom
+      SEARCH: "false"
+      ALLOW_EMAIL_LOGIN: "true"
+      ALLOW_REGISTRATION: "false"
+      ALLOW_SOCIAL_LOGIN: "{{ (librechat_oidc_enabled | bool) | ternary('true', 'false') }}"
+      ALLOW_SOCIAL_REGISTRATION: "{{ ((librechat_oidc_enabled | bool) and (librechat_oidc_allow_registration | bool)) | ternary('true', 'false') }}"
+    labels:
+      org.deepthot.librechat.config-sha1: "{{ librechat_config.checksum }}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./librechat.yaml:/app/librechat.yaml:ro
+      - uploads:/app/uploads
+      - logs:/app/logs
+      - images:/app/client/public/images
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - default
+      - database
+{% if librechat_oidc_enabled | bool %}
+  https:
+    image: "{{ librechat_proxy_image }}"
+    restart: unless-stopped
+    ports:
+      - "{{ librechat_ip }}:443:443"
+    depends_on:
+      - api
+    labels:
+      org.deepthot.librechat.cert-sha1: "{{ librechat_tls_chain.stdout.split() | first }}"
+      org.deepthot.librechat.proxy-config-sha1: "{{ librechat_proxy_config.checksum }}"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - "{{ librechat_tls_dir }}:/etc/librechat/tls:ro"
+{% endif %}
+  mongodb:
+    image: "{{ librechat_mongo_image }}"
+    restart: unless-stopped
+    volumes:
+      - mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ping: 1}).ok === 1 ? 0 : 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - database
+
+networks:
+  database:
+    internal: true
+
+volumes:
+  uploads:
+  logs:
+  images:
+  mongo:

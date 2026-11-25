@@ -19,7 +19,14 @@ def main(spec):
         run('qm','clone',str(template['vmid']),str(vmid),'--name',name,'--full','1','--storage',spec.get('storage','heartogold'),'--format','qcow2');changed=True
     cfg=json.loads(run('pvesh','get',f'/nodes/{node}/qemu/{vmid}/config','--output-format','json'))
     desired={'name':name,'cores':spec.get('cores',2),'memory':spec.get('memory',2048),'cpu':'host','agent':'enabled=1,fstrim_cloned_disks=1','ciupgrade':0,'vga':'serial0','serial0':'socket','boot':'order=scsi0','ipconfig0':f"gw={spec.get('gateway','192.168.42.1')},ip={ip}",'nameserver':spec.get('dns','192.168.42.2'),'searchdomain':spec.get('domain','local.deepthot.org')}
-    if 'tags' in spec:desired['tags']=';'.join(sorted(spec['tags']))
+    if 'tags' in spec:
+        preserved = set(spec.get('preserve_tags', []))
+        requested = set(spec['tags'])
+        if not created:
+            requested = (requested - preserved) | (preserved & set(cfg.get('tags', '').split(';')))
+        if created:
+            requested.update(spec.get('initial_tags', []))
+        desired['tags'] = ';'.join(sorted(requested))
     for key in ('bios','machine'):
         if key in spec:desired[key]=spec[key]
     for key,value in spec.get('hostpci',{}).items():desired[key]=value

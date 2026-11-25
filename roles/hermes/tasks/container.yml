@@ -28,6 +28,7 @@
   community.docker.docker_container:
     name: "{{ hermes_container_name }}"
     image: "{{ hermes_image }}"
+    timeout: 900
     pull: missing
     state: started
     restart_policy: unless-stopped

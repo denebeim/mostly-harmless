@@ -1,0 +1,29 @@
+---
+- name: Require the Authentik settings and credentials
+  ansible.builtin.assert:
+    that:
+      - librechat_authentik_group is defined
+      - librechat_authentik_extra_user is defined
+      - librechat_authentik_container is defined
+      - librechat_url | default('') is match('^https://[A-Za-z0-9.-]+$')
+      - librechat_oidc_client_id | default('') | length > 0
+      - librechat_oidc_client_secret | default('') | length > 0
+    fail_msg: Supply the private Eddie SSO variables to this playbook.
+  no_log: true
+
+- name: Converge the confidential provider and scoped app access
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - -i
+      - "{{ librechat_authentik_container }}"
+      - ak
+      - shell
+      - -c
+      - "import sys; exec(sys.stdin.read())"
+    stdin: "{{ lookup('ansible.builtin.template', role_path ~ '/templates/authentik-provider.py.j2') }}"
+  delegate_to: "{{ librechat_authentik_target | default(inventory_hostname) }}"
+  register: librechat_authentik_result
+  changed_when: "'EDDIE_PROVIDER_CHANGED' in librechat_authentik_result.stdout"
+  no_log: true

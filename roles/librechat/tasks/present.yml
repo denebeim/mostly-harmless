@@ -1,0 +1,200 @@
+---
+- name: Check the existing Ollama model
+  ansible.builtin.uri:
+    url: http://127.0.0.1:11434/api/tags
+    use_proxy: false
+  register: librechat_ollama
+  failed_when: librechat_model not in (librechat_ollama.json.models | map(attribute='name') | list)
+  check_mode: false
+
+- name: Validate OpenID Connect deployment inputs
+  ansible.builtin.assert:
+    that:
+      - librechat_url is match('^https://[A-Za-z0-9.-]+$')
+      - (librechat_oidc_discovery_url | default('')) is match('^https://[^/]+/.+')
+      - (librechat_oidc_client_id | default('')) | length > 0
+      - (librechat_oidc_client_secret | default('')) | length > 0
+      - (librechat_oidc_session_secret | default('')) | length >= 32
+      - not ((librechat_oidc_client_id | default('')) is search('[\r\n]'))
+      - not ((librechat_oidc_client_secret | default('')) is search('[\r\n]'))
+      - not ((librechat_oidc_session_secret | default('')) is search('[\r\n]'))
+    fail_msg: Supply an HTTPS Eddie URL, Authentik discovery URL, and valid OpenID Connect credentials.
+  no_log: true
+  when: librechat_oidc_enabled | bool
+
+- name: Converge the configured Authentik provider
+  ansible.builtin.include_tasks: authentik.yml
+  vars:
+    librechat_authentik_target: "{{ librechat_authentik_host }}"
+  when:
+    - librechat_oidc_enabled | bool
+    - librechat_authentik_host is defined
+
+- name: Issue or renew the configured host-specific certificate
+  ansible.builtin.command:
+    argv: >-
+      {{ [ansible_playbook_python, role_path ~ '/files/renew-tls.py',
+          '--eddie', librechat_tls_ssh_target, '--dmz', librechat_acme_ssh_target,
+          '--hostname', librechat_url | urlsplit('hostname')]
+          + (['--eddie-known-hosts', vm_known_hosts_file] if vm_known_hosts_file is defined else []) }}
+  delegate_to: localhost
+  register: librechat_certificate
+  changed_when: "'Installed Eddie' in librechat_certificate.stdout"
+  when:
+    - librechat_oidc_enabled | bool
+    - librechat_acme_ssh_target is defined
+
+- name: Verify Authentik discovery from Eddie
+  ansible.builtin.uri:
+    url: "{{ librechat_oidc_discovery_url }}"
+    use_proxy: false
+    follow_redirects: none
+  register: librechat_oidc_discovery
+  failed_when: >-
+    librechat_oidc_discovery.status != 200 or
+    not (librechat_oidc_discovery.json.issuer | default('') is match('^' ~ (librechat_oidc_origin | regex_escape) ~ '/')) or
+    not (librechat_oidc_discovery.json.authorization_endpoint | default('') is match('^' ~ (librechat_oidc_origin | regex_escape) ~ '/')) or
+    not (librechat_oidc_discovery.json.token_endpoint | default('') is match('^' ~ (librechat_oidc_origin | regex_escape) ~ '/'))
+  check_mode: false
+  when: librechat_oidc_enabled | bool
+
+- name: Manage the Eddie LibreChat project
+  block:
+    - name: Create private project directory
+      ansible.builtin.file:
+        path: "{{ librechat_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Install the project Docker command
+      ansible.builtin.copy:
+        src: docker-cli.sh
+        dest: "{{ librechat_dir }}/docker-cli"
+        mode: "0700"
+
+    - name: Generate persistent instance secrets on first install
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          umask 077
+          temporary=$(mktemp .env.XXXXXXXX)
+          trap 'rm -f "$temporary"' EXIT
+          {
+            printf 'CREDS_KEY=%s\n' "$(openssl rand -hex 32)"
+            printf 'CREDS_IV=%s\n' "$(openssl rand -hex 16)"
+            printf 'JWT_SECRET=%s\n' "$(openssl rand -hex 32)"
+            printf 'JWT_REFRESH_SECRET=%s\n' "$(openssl rand -hex 32)"
+          } > "$temporary"
+          ln "$temporary" .env
+        chdir: "{{ librechat_dir }}"
+        creates: "{{ librechat_dir }}/.env"
+      no_log: true
+
+    - name: Render Ollama endpoint configuration
+      ansible.builtin.template:
+        src: librechat.yaml.j2
+        dest: "{{ librechat_dir }}/librechat.yaml"
+        mode: "0644"
+      register: librechat_config
+
+    - name: Write the private OpenID Connect environment
+      ansible.builtin.template:
+        src: oidc.env.j2
+        dest: "{{ librechat_dir }}/oidc.env"
+        mode: "0600"
+      no_log: true
+      diff: false
+      when: librechat_oidc_enabled | bool
+
+    - name: Render Eddie's LAN HTTPS proxy
+      ansible.builtin.template:
+        src: nginx.conf.j2
+        dest: "{{ librechat_dir }}/nginx.conf"
+        mode: "0644"
+      register: librechat_proxy_config
+      when: librechat_oidc_enabled | bool
+
+    - name: Read the public certificate checksum using Docker access
+      ansible.builtin.command:
+        argv:
+          - "{{ librechat_dir }}/docker-cli"
+          - run
+          - --rm
+          - --network
+          - none
+          - --mount
+          - "type=bind,src={{ librechat_tls_dir }},dst=/etc/librechat/tls,readonly"
+          - --entrypoint
+          - sha1sum
+          - "{{ librechat_proxy_image }}"
+          - "/etc/librechat/tls/{{ librechat_tls_certificate }}"
+      register: librechat_tls_chain
+      changed_when: false
+      when: librechat_oidc_enabled | bool and not ansible_check_mode
+
+    - name: Render the isolated Compose project
+      ansible.builtin.template:
+        src: compose.yaml.j2
+        dest: "{{ librechat_dir }}/compose.yaml"
+        mode: "0600"
+      when: not ansible_check_mode
+
+    - name: Validate the HTTPS proxy and certificate
+      ansible.builtin.command:
+        argv: ["{{ librechat_dir }}/docker-cli", compose, --project-name, "{{ librechat_project }}", run, --rm, --no-deps, https, nginx, -t]
+        chdir: "{{ librechat_dir }}"
+      changed_when: false
+      when: librechat_oidc_enabled | bool and not ansible_check_mode
+
+    - name: Converge LibreChat and MongoDB
+      community.docker.docker_compose_v2:
+        docker_cli: "{{ librechat_dir }}/docker-cli"
+        project_src: "{{ librechat_dir }}"
+        project_name: "{{ librechat_project }}"
+        pull: missing
+        remove_orphans: true
+        wait: true
+        wait_timeout: 180
+      when: not ansible_check_mode
+
+    - name: Remove the managed OpenID Connect files when disabled
+      ansible.builtin.file:
+        path: "{{ librechat_dir }}/{{ item }}"
+        state: absent
+      loop:
+        - oidc.env
+        - nginx.conf
+      when: not (librechat_oidc_enabled | bool or ansible_check_mode)
+
+    - name: Verify the LibreChat web service from the controller
+      ansible.builtin.uri:
+        url: "{{ librechat_url }}/"
+        use_proxy: false
+        return_content: true
+      delegate_to: localhost
+      register: librechat_http
+      until: librechat_http.status == 200 and 'LibreChat' in librechat_http.content
+      retries: 15
+      delay: 3
+      when: not ansible_check_mode
+
+    - name: Verify the app container can reach Ollama
+      ansible.builtin.command:
+        argv:
+          - "{{ librechat_dir }}/docker-cli"
+          - compose
+          - --project-name
+          - "{{ librechat_project }}"
+          - exec
+          - -T
+          - api
+          - node
+          - -e
+          - >-
+            fetch('http://host.docker.internal:11434/v1/models')
+            .then(r => { if (!r.ok) throw Error(r.status); return r.json(); })
+            .then(r => { if (!r.data.some(model => model.id === process.argv[1])) process.exitCode = 1; })
+          - "{{ librechat_model }}"
+        chdir: "{{ librechat_dir }}"
+      changed_when: false
+      when: not ansible_check_mode

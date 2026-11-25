@@ -286,3 +286,8 @@ __marimo__/
 
 !/HANDOFF.md
 !/HERMES-DESKTOP.md
+
+# Reviewed LibreChat deployment.
+!/librechat.yaml
+!/librechat-authentik.yaml
+!/roles/librechat/

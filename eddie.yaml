@@ -2,9 +2,9 @@
 - ansible.builtin.import_playbook: vm.yaml
   vars:
     vm:
-      name: eddie
-      id: 314
-      ip: 192.168.42.132
+      name: "{{ eddie_host | default('eddie') }}"
+      id: "{{ eddie_vm_id | default(314) | int }}"
+      ip: "{{ eddie_ip | default('192.168.42.132') }}"
       memory: 16384
       cores: 8
       disk: 40G
@@ -14,8 +14,10 @@
       docker_members: [hermes]
       update_packages: true
       tags: [ipa, docker, gpu, ollama, hermes]
+      preserve_tags: [librechat]
+      initial_tags: "{{ eddie_initial_optional_tags | default(['librechat']) }}"
       hostpci:
-        hostpci0: "0000:81:00,pcie=1"
+        hostpci0: "{{ eddie_gpu_pci | default('0000:81:00,pcie=1') }}"
     hermes_default_model: qwen3.5:4b
     hermes_provider: custom
     hermes_base_url: http://127.0.0.1:11434/v1
@@ -25,3 +27,5 @@
       - /dev/dri:/dev/dri
       - /dev/nvidia0:/dev/nvidia0
       - /dev/nvidiactl:/dev/nvidiactl
+
+- ansible.builtin.import_playbook: librechat.yaml

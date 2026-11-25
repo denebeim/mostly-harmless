@@ -3,7 +3,7 @@
 These instructions apply under `ai-twiddles/codex/` and supplement repository instructions.
 
 - Use a `codex/` branch for this area's experiments. Inspect the actual remote default branch and current changes before starting. Keep other tasks' working changes intact.
-- The owner authorizes autonomous commits and merges for this isolated experimental area. Use explicit staging paths and review the resulting diff. Respect normal PR checks, required reviews and branch protection; no bypass flags or force pushes.
+- Commit and push scoped changes on the isolated pull branch. Use explicit staging paths and review the resulting diff. Follow the [owner acceptance workflow](../../CONTROLLER.md#review-and-acceptance) and normal PR checks and branch protection.
 - This authorization does not cover publishing work in the owner's voice. Publication work needs a ticket, dedicated branch, collaborative refinement until the owner is satisfied with their voice, an owner-made commit, a work-log update, and a PR prepared together.
 - Preserve Gemini and both existing mouse setups. Do not relocate or overwrite `ai-twiddles/logitech-m705-gemini-dictation/`, `ai-twiddles/logitech-m705-chatgpt-voice/`, live launchers, GNOME shortcuts or mouse presets for organizational convenience.
 - Shared logging code and other assistants' files are outside this area's autonomous edit scope. Appending authorized significant findings to the established work log is allowed; preserve unrelated entries.

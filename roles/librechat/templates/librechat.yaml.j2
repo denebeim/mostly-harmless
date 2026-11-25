@@ -1,0 +1,33 @@
+version: 1.3.19
+cache: true
+endpoints:
+  custom:
+    - name: ollama
+      apiKey: ollama
+      baseURL: http://host.docker.internal:11434/v1/
+      models:
+        default: ["{{ librechat_model }}"]
+        fetch: false
+      titleConvo: false
+      modelDisplayLabel: Ollama
+
+modelSpecs:
+  list:
+    - name: eddie
+      label: Eddie
+      showOnLanding: true
+      default: true
+      description: "Hello! Eddie here. I'm delighted to help."
+      preset:
+        endpoint: ollama
+        model: "{{ librechat_model }}"
+        promptPrefix: |-
+{{ lookup('ansible.builtin.file', librechat_soul_file) | indent(10, true) }}
+    - name: plain-ollama
+      label: Plain Ollama
+      showOnLanding: true
+      description: Same model without Eddie's persona
+      preset:
+        endpoint: ollama
+        model: "{{ librechat_model }}"
+        promptPrefix: ""
