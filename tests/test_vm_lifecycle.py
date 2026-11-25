@@ -41,6 +41,42 @@ class VMTests(unittest.TestCase):
         changes=[c for c in calls if c[:2]==('qm','set')]
         self.assertEqual(changes,[('qm','set','8314','--tags','docker')])
 
+    def test_existing_vm_preserves_operator_selected_optional_tag(self):
+        spec, config, calls, run = self.fixture()
+        spec.update(tags=['docker'], preserve_tags=['librechat'], initial_tags=['librechat'])
+        for live_tags in ('docker;librechat', 'docker'):
+            with self.subTest(live_tags=live_tags):
+                config['tags'] = live_tags
+                with patch.object(module, 'run', run):
+                    result = module.main(spec)
+                self.assertFalse(result['changed'])
+                self.assertEqual(result['tags'], live_tags.split(';'))
+        self.assertFalse(any(call[:2] == ('qm', 'set') for call in calls))
+
+    def test_new_vm_seeds_optional_tag(self):
+        spec, config, calls, _ = self.fixture()
+        spec.update(tags=['docker'], preserve_tags=['librechat'], initial_tags=['librechat'])
+
+        def run(*args):
+            calls.append(args)
+            if args[:3] == ('pvesh', 'get', '/cluster/resources'):
+                return json.dumps([{'vmid': 8000, 'name': 'deepthot-24-04', 'template': 1}])
+            if args[:2] == ('pvesh', 'get'):
+                return json.dumps(config)
+            if args[:2] == ('qm', 'set'):
+                config['tags'] = args[-1]
+                return ''
+            if args[:2] == ('qm', 'status'):
+                return 'status: running'
+            if args[:2] == ('qm', 'clone'):
+                return ''
+            raise AssertionError(args)
+
+        with patch.object(module, 'run', run):
+            result = module.main(spec)
+        self.assertEqual(result['tags'], ['docker', 'librechat'])
+        self.assertIn(('qm', 'set', '8314', '--tags', 'docker;librechat'), calls)
+
     def test_secret_and_private_pem_are_redacted_before_logging(self):
         with tempfile.TemporaryDirectory() as d:
             path=Path(d)/'session.log';env=dict(os.environ,DEEPTHOT_SESSION_LOG=str(path),TEST_API_KEY='fixture-secret-123456')

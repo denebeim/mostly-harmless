@@ -32,7 +32,7 @@ with transaction.atomic():
         raise RuntimeError("Authentik is missing a standard OpenID scope")
 
     provider, changed = OAuth2Provider.objects.get_or_create(
-        name="Provider for Eddie",
+        name={{ librechat_authentik_provider_name | to_json }},
         defaults={
             "client_id": client_id,
             "client_secret": client_secret,
@@ -64,9 +64,9 @@ with transaction.atomic():
         changed = True
 
     app, created = Application.objects.get_or_create(
-        slug="eddie",
+        slug={{ librechat_authentik_app_slug | to_json }},
         defaults={
-            "name": "Eddie LibreChat",
+            "name": {{ librechat_authentik_app_name | to_json }},
             "provider": provider,
             "policy_engine_mode": "any",
             "meta_launch_url": launch_url,

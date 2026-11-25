@@ -1,6 +1,6 @@
 # Deepthot handoff — 2026-11-08
 
-Treat earlier worklog entries as history. Check live state before changing it. This file describes the current checkpoint; WORKLOG.md records the sequence. The private log appends at /home/denebeim/projects/mostly-harmless/eddie-session.log (0600, ignored). Watch it with `tail -F` and run commands through `python3 scripts/log-session.py COMMAND ...`; keep secret tasks silent.
+Treat earlier worklog entries as history. Check live state before changing it. This file describes the November 8 checkpoint; WORKLOG.md records the sequence. The private log appends at /home/denebeim/projects/mostly-harmless/chat.log (0600, ignored). Watch it with `tail -F` and run commands through `python3 scripts/log-session.py COMMAND ...`; keep secret tasks silent.
 
 - Working repo: /home/denebeim/projects/mostly-harmless. Reference: /home/denebeim/ansible/deepthot-configuration. Use `.venv`, the private `.envrc`, and explicit `-F /dev/null` SSH options when needed. Do not commit inventory credentials, Pi-hole TOML, keys, or logs. The Docker migration and Desktop report are on main via PR #7 (squash fdec47d). Central IPA Docker policy is tracked in issue #8.
 - #3 completed by PR #6, squash d0849ca800dc8ecf3e1e9d4e27da1cdc877b555d. Shared VM declaration/role changes passed 13 tests, syntax, and real no-role and Docker-only test guest reruns with zero changes. No upgrades. VM 8314 and storage released, no IPA host existed, test SSH trust files removed. Fresh IPA-only enrollment has not been retested.

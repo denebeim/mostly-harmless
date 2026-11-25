@@ -1,5 +1,9 @@
 # WORKLOG
 
+> This is a historical snapshot. The [active work log](https://github.com/denebeim/mostly-harmless/blob/work-log/WORKLOG.md)
+> is maintained on the separate `work-log` branch.
+> See the [acceptance workflow](CONTROLLER.md#review-and-acceptance) for current instructions.
+
 > Living project log for `mostly-harmless`.
 > Updated as work is performed in this repository and during infrastructure sessions.
 > This repository is currently **public**. Keep credentials, private keys, exact internal
@@ -51,8 +55,8 @@ Use the current request to determine scope and authorization.
   are also on the list. These ideas have no execution authorization here.
 - **Working rules.** Read `AGENTS.md`, `CONTROLLER.md` and `HANDOFF.md`.
   Commit work-log updates locally and often in a dedicated checkout of
-  `work-log`. The owner pushes that branch to GitHub regularly, especially
-  before handing off to another AI. Keep `work-log` separate from `main`.
+  `work-log`. ~~The owner pushes that branch to GitHub regularly, especially
+  before handing off to another AI.~~ Keep `work-log` separate from `main`.
   Preserve existing edits. The owner reviews the concrete change and must
   explicitly approve integration to `main`. Treat branch and log instructions
   in older entries as historical. Run shell commands through
@@ -88,7 +92,7 @@ to evolve deliberately.
 ## Collaboration workflow
 
 - Commit `WORKLOG.md` locally at meaningful checkpoints on the dedicated
-  `work-log` branch. The owner pushes it regularly, especially for AI handoffs.
+  `work-log` branch. ~~The owner pushes it regularly, especially for AI handoffs.~~
   Keep that branch separate from `main`.
 - For changes intended for `main`, show the owner the concrete diff and obtain
   explicit approval after review before integration.
@@ -121,7 +125,7 @@ AI is a seeing stone: it helps the owner examine more, organize ideas and explor
 
 ### Reusable prompt: independent work-log checkpoint (Codex or Gemini)
 
-> Update the existing WORKLOG.md on the separate work-log branch of denebeim/mostly-harmless. Use its own clean checkout, preserve prior entries and other work, and record meaningful results, failures, decisions and pending actions in a concise factual entry. Include only the work-log file in its commit. Do not merge work-log into main or move the work log onto main for convenience. Do not publish raw chat transcripts, credentials, raw chat.log or exact internal addresses. Commit updates locally and often. Leave the GitHub push to the owner, who pushes regularly, especially when handing off to another AI. If a protection or approval check blocks publication, stop that action, preserve the local result and report the reason; do not try another route around it.
+> Update the existing WORKLOG.md on the separate work-log branch of denebeim/mostly-harmless. Use its own clean checkout, preserve prior entries and other work, and record meaningful results, failures, decisions and pending actions in a concise factual entry. Include only the work-log file in its commit. Do not merge work-log into main or move the work log onto main for convenience. Do not publish raw chat transcripts, credentials, raw chat.log or exact internal addresses. Commit updates locally and often. ~~Leave the GitHub push to the owner, who pushes regularly, especially when handing off to another AI.~~ If a protection or approval check blocks publication, stop that action, preserve the local result and report the reason; do not try another route around it.
 
 ## Active priority: Eddie playbook recovery
 
@@ -862,7 +866,7 @@ remote branch/upstream verification is pending.
 
 ## 2026-11-16 — Codex experiment boundary and reusable workflow prompts
 
-Owner authorized a Codex-specific `ai-twiddles/codex/` directory, isolated experimental branches, and autonomous scoped commits/merges through normal repository protections. Work intended for publication in the owner's voice follows a separate collaborative process. Owner explicitly requested these reusable prompts be committed and pushed to GitHub on this independent `work-log` branch. This entry is an operating agreement, not a claim that every publication step below has already completed.
+Owner authorized a Codex-specific `ai-twiddles/codex/` directory, isolated experimental branches, and ~~autonomous scoped commits/merges through normal repository protections~~. Work intended for publication in the owner's voice follows a separate collaborative process. Owner explicitly requested these reusable prompts be committed and pushed to GitHub on this independent `work-log` branch. This entry is an operating agreement, not a claim that every publication step below has already completed.
 
 ### November 16 verification and open items
 

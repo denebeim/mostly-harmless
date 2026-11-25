@@ -23,6 +23,7 @@
     name: "{{ vm_created.name }}"
     ansible_host: "{{ vm_created.ip }}"
     ansible_user: ansible
+    managed_vm_tags: "{{ vm_created.tags }}"
     vm_known_hosts_file: "{{ playbook_dir }}/.ansible/known_hosts/{{ vm_created.id }}-{{ vm_created.mac | replace(':', '') }}"
     ansible_ssh_common_args: "-F /dev/null -o PasswordAuthentication=no -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile={{ playbook_dir }}/.ansible/known_hosts/{{ vm_created.id }}-{{ vm_created.mac | replace(':', '') }}"
     groups: "{{ ['managed_vms'] + (vm_created.tags | map('regex_replace', '^', 'tag_') | list) }}"

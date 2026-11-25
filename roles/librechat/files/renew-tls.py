@@ -7,22 +7,21 @@ import subprocess
 
 SSH = ["ssh", "-F", "/dev/null", "-o", "BatchMode=yes", "-o",
        "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=6"]
-EDDIE = "ansible@192.168.42.132"
-DMZ = "ansible@192.168.42.15"
 
 PREPARE = """
 set -eu
 umask 077
 install -d -m 0700 /etc/librechat-eddie/tls
 cd /etc/librechat-eddie/tls
-if [ -s key.pem ] && openssl x509 -in fullchain.pem -checkend 2592000 -noout >/dev/null 2>&1; then
+if [ -s key.pem ] && openssl x509 -in fullchain.pem -checkend 2592000 -noout >/dev/null 2>&1 \
+    && openssl verify -verify_hostname CERT_HOSTNAME -untrusted fullchain.pem fullchain.pem >/dev/null 2>&1; then
     exit 10
 fi
 if [ ! -s key.pem ]; then
     openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out key.pem
 fi
-openssl req -new -key key.pem -subj /CN=eddie.local.deepthot.org \\
-    -addext subjectAltName=DNS:eddie.local.deepthot.org
+openssl req -new -key key.pem -subj /CN=CERT_HOSTNAME \\
+    -addext subjectAltName=DNS:CERT_HOSTNAME
 """
 
 ISSUE = '''set -eu
@@ -44,7 +43,7 @@ cd /etc/librechat-eddie/tls
 tmp=$(mktemp)
 trap 'rm -f "$tmp"' EXIT
 cat > "$tmp"
-openssl verify -verify_hostname eddie.local.deepthot.org -untrusted "$tmp" "$tmp"
+openssl verify -verify_hostname CERT_HOSTNAME -untrusted "$tmp" "$tmp"
 test "$(openssl x509 -in "$tmp" -noout -pubkey)" = "$(openssl pkey -in key.pem -pubout)"
 install -m 0644 "$tmp" fullchain.pem.next
 mv fullchain.pem.next fullchain.pem
@@ -57,23 +56,34 @@ fi
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--eddie-known-hosts", help="Verified host-key file for this Eddie VM")
+    parser.add_argument("--eddie", required=True, help="SSH destination for the LibreChat host")
+    parser.add_argument("--dmz", required=True, help="SSH destination for the DNS challenge host")
+    parser.add_argument("--hostname", required=True, help="DNS name to certify")
     args = parser.parse_args()
+    if not all(part and part.isascii() and part.replace("-", "").isalnum()
+               for part in args.hostname.split(".")):
+        parser.error("hostname must be a DNS name")
+    for destination in (args.eddie, args.dmz):
+        if destination.startswith("-") or any(char.isspace() for char in destination):
+            parser.error("invalid SSH destination")
+    prepare = PREPARE.replace("CERT_HOSTNAME", args.hostname)
+    install = INSTALL.replace("CERT_HOSTNAME", args.hostname)
     eddie_ssh = SSH.copy()
     if args.eddie_known_hosts:
         eddie_ssh.extend(["-o", f"UserKnownHostsFile={args.eddie_known_hosts}"])
 
     request = subprocess.run(
-        eddie_ssh + [EDDIE, "sudo -n bash -c " + shlex.quote(PREPARE)],
+        eddie_ssh + [args.eddie, "sudo -n bash -c " + shlex.quote(prepare)],
         stdout=subprocess.PIPE, timeout=30)
     if request.returncode == 10:
         print("Eddie's certificate has more than 30 days left.")
         return
     request.check_returncode()
     result = subprocess.run(
-        SSH + [DMZ, "bash -c " + shlex.quote(ISSUE)],
+        SSH + [args.dmz, "bash -c " + shlex.quote(ISSUE)],
         input=request.stdout, stdout=subprocess.PIPE, timeout=180, check=True)
     subprocess.run(
-        eddie_ssh + [EDDIE, "sudo -n bash -c " + shlex.quote(INSTALL)],
+        eddie_ssh + [args.eddie, "sudo -n bash -c " + shlex.quote(install)],
         input=result.stdout, timeout=30, check=True)
     print("Installed Eddie's verified certificate chain.")
 

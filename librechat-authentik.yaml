@@ -1,0 +1,10 @@
+---
+- name: Manage Eddie's OpenID Connect application in Authentik
+  hosts: "{{ librechat_authentik_host | default('librechat_authentik') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Configure the provider and access bindings
+      ansible.builtin.include_role:
+        name: librechat
+        tasks_from: authentik
