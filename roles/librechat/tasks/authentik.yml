@@ -11,17 +11,19 @@
     fail_msg: Supply the private Eddie SSO variables to this playbook.
   no_log: true
 
+- name: Check direct Docker access on the Authentik host
+  ansible.builtin.stat:
+    path: /var/run/docker.sock
+    get_checksum: false
+  delegate_to: "{{ librechat_authentik_target | default(inventory_hostname) }}"
+  register: librechat_authentik_socket
+
 - name: Converge the confidential provider and scoped app access
   ansible.builtin.command:
-    argv:
-      - docker
-      - exec
-      - -i
-      - "{{ librechat_authentik_container }}"
-      - ak
-      - shell
-      - -c
-      - "import sys; exec(sys.stdin.read())"
+    argv: >-
+      {{ ([] if librechat_authentik_socket.stat.writeable | default(false) else ['sudo', '-n'])
+         + ['/usr/bin/docker', 'exec', '-i', librechat_authentik_container,
+            'ak', 'shell', '-c', 'import sys; exec(sys.stdin.read())'] }}
     stdin: "{{ lookup('ansible.builtin.template', role_path ~ '/templates/authentik-provider.py.j2') }}"
   delegate_to: "{{ librechat_authentik_target | default(inventory_hostname) }}"
   register: librechat_authentik_result

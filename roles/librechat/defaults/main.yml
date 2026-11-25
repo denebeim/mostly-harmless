@@ -1,5 +1,6 @@
 ---
 librechat_oidc_enabled: false
+librechat_allow_plain_http: false
 librechat_oidc_allow_registration: false
 librechat_image: ghcr.io/librechat-ai/librechat:v0.8.9@sha256:51550d041e298f0740d98743a3ffdeac9be4cf6dcb1bcd938e6db8779c420fc4
 librechat_proxy_image: nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
