@@ -1,4 +1,12 @@
 ---
+- name: Require an explicit opt-in for a plain HTTP pilot
+  ansible.builtin.assert:
+    that:
+      - librechat_allow_plain_http | bool
+      - librechat_url is match('^http://[^/]+$')
+    fail_msg: Enable OIDC with HTTPS for Eddie, or explicitly opt in to the plain HTTP pilot.
+  when: not (librechat_oidc_enabled | bool)
+
 - name: Check the existing Ollama model
   ansible.builtin.uri:
     url: http://127.0.0.1:11434/api/tags
@@ -30,6 +38,17 @@
     - librechat_oidc_enabled | bool
     - librechat_authentik_host is defined
 
+- name: Require the default TLS paths for host-specific issuance
+  ansible.builtin.assert:
+    that:
+      - librechat_tls_dir == '/etc/librechat-eddie/tls'
+      - librechat_tls_certificate == 'fullchain.pem'
+      - librechat_tls_key == 'key.pem'
+    fail_msg: Use the default TLS paths for host-specific issuance, or omit the issuance target to use a supplied certificate.
+  when:
+    - librechat_oidc_enabled | bool
+    - librechat_acme_ssh_target is defined
+
 - name: Issue or renew the configured host-specific certificate
   ansible.builtin.command:
     argv: >-
@@ -53,6 +72,8 @@
   failed_when: >-
     librechat_oidc_discovery.status != 200 or
     not (librechat_oidc_discovery.json.issuer | default('') is match('^' ~ (librechat_oidc_origin | regex_escape) ~ '/')) or
+    ((librechat_oidc_discovery.json.issuer | default('') | regex_replace('/+$', ''))
+     ~ '/.well-known/openid-configuration') != librechat_oidc_discovery_url or
     not (librechat_oidc_discovery.json.authorization_endpoint | default('') is match('^' ~ (librechat_oidc_origin | regex_escape) ~ '/')) or
     not (librechat_oidc_discovery.json.token_endpoint | default('') is match('^' ~ (librechat_oidc_origin | regex_escape) ~ '/'))
   check_mode: false
