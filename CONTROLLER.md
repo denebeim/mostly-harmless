@@ -5,10 +5,21 @@ Run from this checkout; `~/ansible/deepthot-configuration` is the working refere
 ## Operating contract
 
 - Record significant observations, changes, verification and pending work in tracked `WORKLOG.md`.
-- Append command stdout/stderr to untracked `eddie-session.log`. Use `python3 scripts/log-session.py COMMAND ...`; it redacts secret-like values and private PEM blocks before writing/displaying output. Never print credentials or raw private configuration deliberately; Ansible secret tasks must use `no_log`.
+- Append command stdout/stderr to untracked `chat.log`. Use `python3 scripts/log-session.py COMMAND ...`; it redacts secret-like values and private PEM blocks before writing/displaying output. Never print credentials or raw private configuration deliberately; Ansible secret tasks must use `no_log`.
 - Static IPs may be documented. Never commit `.envrc`, inventory secrets, ticket caches, private certificates/keys or the private Pi-hole TOML.
 - Per-machine playbooks declare a `vm` and import `vm.yaml`. Shared roles converge absent-to-installed. Do not add permanent fix/repair playbooks; apply the change, record it and update the owning role.
-- VM tags gate roles: `ipa`, `docker`, `gpu`, `ollama`, `hermes`. An empty tag list is supported. IPA is optional and handles identity/automount, not LAN DNS; Pi-hole owns DNS.
+- VM tags select optional applications. Optional application roles reconcile both the present and absent states. Eddie preserves the live Proxmox `librechat` tag and declares Ollama and Hermes as core features. An empty tag list is supported on general-purpose guests. IPA is optional and handles identity and automount. BIND9 serves LAN DNS.
+
+## Review and acceptance
+
+Develop in an isolated checkout and keep experiments under the appropriate
+`ai-twiddles/` directory. Assistants may commit and push to their scoped pull
+branches. Address review feedback and move deployable files to the regular
+layout on the pull branch. Create an acceptance branch from current main and
+target the pull request there. Joy reviews the concrete diff, performs the
+first merge and owns the acceptance branch afterward. Joy approves and performs
+the second merge into main. Keep work-log checkpoints on the separate
+`work-log` branch.
 
 ## Setup and run
 
@@ -48,6 +59,8 @@ sudo docker exec -it -u hermes hermes hermes -p local chat
 ```
 
 The original native installation and files are retained for rollback; its services are disabled after migration. See `HANDOFF.md` for state and rollback. Laptop files remain the source of truth; see `HERMES-DESKTOP.md` for the proposed workload split. The old one-off recovery entrypoints remain in Git history.
+
+See [LibreChat on Eddie](roles/librechat/README.md) for tag reconciliation, site and vault settings, and acceptance checks.
 
 ## Central Docker administration
 

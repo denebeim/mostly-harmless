@@ -1,6 +1,6 @@
 # Codex experiments
 
-This is Codex's area for personal experiments in mostly-harmless. Keep new Codex experiments here, on a `codex/` branch. The owner authorizes Codex to commit and merge changes in this area to the repository's actual default branch without asking again for each routine commit or merge. Check the remote default branch instead of assuming its name. At setup, it is `main`.
+This is Codex's area for personal experiments in mostly-harmless. Keep new Codex experiments here, on a `codex/` branch. Follow the [owner acceptance workflow](../../CONTROLLER.md#review-and-acceptance).
 
 ## Two workflows
 
@@ -9,7 +9,7 @@ This is Codex's area for personal experiments in mostly-harmless. Keep new Codex
 1. Start an isolated `codex/` branch from the current remote default branch. Use a worktree when the owner's checkout has other changes.
 2. Keep implementation, notes and scoped instructions under `ai-twiddles/codex/`. Record significant actions in WORKLOG.md on the separate `work-log` branch.
 3. Review the diff and run checks appropriate to the actual change. Stage explicit paths only.
-4. Commit and integrate the scoped experiment autonomously. A normal pull request is the preferred merge route. Respect branch protection, reviews and checks; never bypass them. If access or protection blocks the merge, leave a reviewable branch/PR and report the exact blocker.
+4. Commit and push the scoped experiment on the pull branch. Address review feedback and move deployable files to the regular layout. Target the PR at an acceptance branch from main and leave both merges to Joy.
 
 This permission covers the experimental implementation and its technical operating notes. It does not authorize publishing writing in the owner's name.
 
@@ -21,7 +21,7 @@ This permission covers the experimental implementation and its technical operati
 4. The owner makes the commit.
 5. Update the work log and prepare the pull request together.
 
-Autonomous experimental commits and merges do not shorten this publication workflow.
+Autonomous experimental commits and pushes do not shorten this publication workflow.
 
 ## Existing mouse buttons
 

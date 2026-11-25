@@ -1,0 +1,20 @@
+---
+librechat_oidc_enabled: false
+librechat_oidc_allow_registration: false
+librechat_image: ghcr.io/librechat-ai/librechat:v0.8.9@sha256:51550d041e298f0740d98743a3ffdeac9be4cf6dcb1bcd938e6db8779c420fc4
+librechat_proxy_image: nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
+librechat_mongo_image: mongo:8.0.20@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef
+librechat_model: "qwen3.5:4b"
+librechat_soul_file: "{{ role_path }}/files/SOUL.md"
+librechat_ip: "{{ ansible_host }}"
+librechat_url: "http://{{ inventory_hostname }}"
+librechat_oidc_origin: "{{ librechat_oidc_discovery_url | urlsplit('scheme') }}://{{ librechat_oidc_discovery_url | urlsplit('netloc') }}"
+librechat_tls_dir: /etc/librechat-eddie/tls
+librechat_tls_certificate: fullchain.pem
+librechat_tls_key: key.pem
+librechat_project: librechat-eddie
+librechat_dir: "{{ librechat_home.stdout }}/.local/share/{{ librechat_project }}"
+librechat_tls_ssh_target: "{{ ansible_user | default('ansible') }}@{{ librechat_ip }}"
+librechat_authentik_provider_name: Provider for Eddie
+librechat_authentik_app_name: Eddie LibreChat
+librechat_authentik_app_slug: eddie

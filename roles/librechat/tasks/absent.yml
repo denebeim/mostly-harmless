@@ -1,0 +1,25 @@
+---
+- name: Check for the existing LibreChat project
+  ansible.builtin.stat:
+    path: "{{ librechat_dir }}/compose.yaml"
+  register: librechat_compose
+
+- name: Remove LibreChat containers and networks
+  community.docker.docker_compose_v2:
+    docker_cli: "{{ librechat_dir }}/docker-cli"
+    project_src: "{{ librechat_dir }}"
+    project_name: "{{ librechat_project }}"
+    state: absent
+    remove_orphans: true
+  when: librechat_compose.stat.exists
+
+- name: Remove the rendered LibreChat configuration
+  ansible.builtin.file:
+    path: "{{ librechat_dir }}/{{ item }}"
+    state: absent
+  loop:
+    - compose.yaml
+    - nginx.conf
+    - oidc.env
+    - librechat.yaml
+    - docker-cli

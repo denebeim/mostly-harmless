@@ -1,0 +1,18 @@
+---
+- name: Resolve the deployment account's home
+  ansible.builtin.command: printenv HOME
+  register: librechat_home
+  changed_when: false
+  check_mode: false
+
+- name: Read the LibreChat tag from Proxmox
+  ansible.builtin.set_fact:
+    librechat_enabled: "{{ 'librechat' in ((managed_vm_tags | default((proxmox_tags | default('')).split(';'))) | list) }}"
+
+- name: Configure enabled LibreChat service
+  ansible.builtin.include_tasks: present.yml
+  when: librechat_enabled | bool
+
+- name: Remove disabled LibreChat service
+  ansible.builtin.include_tasks: absent.yml
+  when: not (librechat_enabled | bool)

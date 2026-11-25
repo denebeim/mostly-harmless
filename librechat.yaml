@@ -1,0 +1,18 @@
+---
+- name: Reconcile Eddie's LibreChat service
+  hosts: "{{ eddie_host | default('eddie') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Reconcile the project with the configured deployment account
+      ansible.builtin.include_role:
+        name: librechat
+        apply:
+          vars:
+            ansible_user: "{{ librechat_deploy_user }}"
+      when: librechat_deploy_user is defined
+
+    - name: Reconcile the project with the inventory account
+      ansible.builtin.include_role:
+        name: librechat
+      when: librechat_deploy_user is undefined
