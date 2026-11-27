@@ -78,7 +78,15 @@
         num_predict: 256
         temperature: 0
   register: ollama_inkling_test
+  vars:
+    inkling_expected_reply: >-
+      (?ix) ^
+      (?:(?: (?:the\s+)?answer(?:\s+is\b\s*:?|\s*:) | it\s+is\b |
+      seven\s+times\s+eight\s+(?:is|equals)\b |
+      7\s*[x×*]\s*8\s*(?:=|equals\b) )\s*)?
+      (?:56|\*\*56\*\*)
+      (?:\s+is\s+the\s+answer)? [.!]? $
   failed_when: >-
     ollama_inkling_test.status != 200 or
     not (ollama_inkling_test.json.done | default(false)) or
-    (ollama_inkling_test.json.response | default('') | trim) != '56'
+    not (ollama_inkling_test.json.response | default('') | trim is match(inkling_expected_reply))

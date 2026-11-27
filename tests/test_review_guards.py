@@ -113,6 +113,24 @@ class DeletionGuardTests(unittest.TestCase):
 
 
 class PlaybookGuardTests(unittest.TestCase):
+    def test_inkling_smoke_accepts_correct_short_replies_only(self):
+        tasks = yaml.safe_load((ROOT / 'roles/machines/ollama/tasks/inkling.yml').read_text())
+        task = next(task for task in tasks if task.get('register') == 'ollama_inkling_test')
+        env = Environment()
+        env.tests['match'] = lambda reply, pattern: re.match(pattern, reply) is not None
+        failed = env.compile_expression(task['failed_when'])
+        cases = [
+            ('56', False), ('56.', False), (' The answer is **56**. ', False),
+            ('The answer is: 56', False), ('The answer is: 156', True),
+            ('Seven times eight equals 56.', False), ('7 × 8 = 56', False),
+            ('156', True), ('56.5', True), ('The answer is not 56.', True),
+            ('I first thought 56, but the answer is 57.', True), ('', True),
+        ]
+        for reply, expected in cases:
+            with self.subTest(reply=reply):
+                result = {'status': 200, 'json': {'done': True, 'response': reply}}
+                self.assertEqual(failed(ollama_inkling_test=result, **task['vars']), expected)
+
     def test_both_destructive_entrypoints_check_efi_and_tpm(self):
         for name in ('roles/proxmox/rebuild_vm/tasks/preflight.yml',):
             text = (ROOT / name).read_text()
