@@ -26,7 +26,6 @@
     ollama_verify_lan: true
     ollama_inkling_source: inkling-2-mini:26b-a5b-iq4_NL
     ollama_inkling_model: &inkling_model inkling-2-mini:eddie-cpu
-    ollama_enable_inkling: "{{ eddie_enable_inkling | default(false) | bool }}"
     hermes_gpu_devices:
       - /dev/dri:/dev/dri
       - /dev/nvidia0:/dev/nvidia0
@@ -35,4 +34,3 @@
 - ansible.builtin.import_playbook: librechat.yaml
   vars:
     librechat_inkling_model: *inkling_model
-    librechat_enable_inkling: "{{ eddie_enable_inkling | default(false) | bool }}"

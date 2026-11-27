@@ -217,8 +217,6 @@
             .then(r => { if (!r.data.some(model => model.id === process.argv[1])) process.exitCode = 1; })
           - "{{ item }}"
         chdir: "{{ librechat_dir }}"
-      loop: >-
-        {{ [librechat_model] + ([librechat_inkling_model]
-             if librechat_enable_inkling | default(false) | bool else []) }}
+      loop: "{{ [librechat_model, librechat_inkling_model] }}"
       changed_when: false
       when: not ansible_check_mode
