@@ -6,6 +6,7 @@ librechat_image: ghcr.io/librechat-ai/librechat:v0.8.9@sha256:51550d041e298f0740
 librechat_proxy_image: nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
 librechat_mongo_image: mongo:8.0.20@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef
 librechat_model: "qwen3.5:4b"
+librechat_inkling_model: "inkling-2-mini:eddie-cpu"
 librechat_soul_file: "{{ role_path }}/files/SOUL.md"
 librechat_ip: "{{ ansible_host }}"
 librechat_url: "http://{{ inventory_hostname }}"

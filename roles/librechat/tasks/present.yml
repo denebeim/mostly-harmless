@@ -7,13 +7,21 @@
     fail_msg: Enable OIDC with HTTPS for Eddie, or explicitly opt in to the plain HTTP pilot.
   when: not (librechat_oidc_enabled | bool)
 
-- name: Check the existing Ollama model
+- name: Read the installed Ollama models
   ansible.builtin.uri:
     url: http://127.0.0.1:11434/api/tags
     use_proxy: false
   register: librechat_ollama
-  failed_when: librechat_model not in (librechat_ollama.json.models | map(attribute='name') | list)
   check_mode: false
+
+- name: Require both Eddie models before changing LibreChat
+  ansible.builtin.assert:
+    that: librechat_missing_models | length == 0
+    fail_msg: "Run eddie.yaml before reconciling LibreChat. Missing Ollama models: {{ librechat_missing_models | join(', ') }}"
+  vars:
+    librechat_missing_models: >-
+      {{ [librechat_model, librechat_inkling_model]
+         | difference(librechat_ollama.json.models | map(attribute='name') | list) }}
 
 - name: Validate OpenID Connect deployment inputs
   ansible.builtin.assert:
@@ -215,7 +223,8 @@
             fetch('http://host.docker.internal:11434/v1/models')
             .then(r => { if (!r.ok) throw Error(r.status); return r.json(); })
             .then(r => { if (!r.data.some(model => model.id === process.argv[1])) process.exitCode = 1; })
-          - "{{ librechat_model }}"
+          - "{{ item }}"
         chdir: "{{ librechat_dir }}"
+      loop: "{{ [librechat_model, librechat_inkling_model] }}"
       changed_when: false
       when: not ansible_check_mode
