@@ -9,6 +9,7 @@
       memory: 28672
       cores: 8
       disk: 64G
+      grow_root_filesystem: true
       bios: ovmf
       machine: q35
       local_users: [hermes]
