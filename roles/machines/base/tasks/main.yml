@@ -11,6 +11,10 @@
     cloud_init.rc != 0 and not (cloud_init.rc == 2 and
     'status: done' in cloud_init.stdout and 'errors: []' in cloud_init.stdout)
 
+- name: Grow the declared guest root filesystem
+  ansible.builtin.include_tasks: grow_root.yml
+  when: (vm.grow_root_filesystem | default(false) | bool) and not ansible_check_mode
+
 - name: Install the guest agent
   ansible.builtin.apt:
     name: qemu-guest-agent
