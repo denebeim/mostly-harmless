@@ -133,8 +133,8 @@ instance secrets together for backups.
 Run `eddie.yaml` with `-e eddie_enable_inkling=true` to install and verify
 Inkling before adding it to LibreChat. The Eddie VM profile allocates 28 GiB
 of RAM and a 64 GiB boot disk for this model. The opt-in requires Ollama
-0.40.18 or later. Eddie's Qwen preset remains the default, and the Inkling
-preset has an empty persona prompt.
+0.40.18 or later. The Inkling profile uses the CPU with a 4K context and
+has an empty persona prompt. Eddie's Qwen preset remains the default.
 
 Run the same playbook with `-e eddie_enable_inkling=false` to remove Inkling
 from LibreChat. The downloaded weights and installed Ollama version are

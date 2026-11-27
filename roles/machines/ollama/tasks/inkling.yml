@@ -17,7 +17,24 @@
   delay: 5
   until: inkling_ollama_api.status == 200 and inkling_ollama_api.json.version is version('0.40.18', '>=')
 
-- name: Inspect locally installed Inkling model
+- name: Inspect locally installed Inkling weights
+  ansible.builtin.uri:
+    url: http://127.0.0.1:11434/api/show
+    method: POST
+    body_format: json
+    body:
+      model: "{{ ollama_inkling_source }}"
+    status_code: [200, 404]
+  register: ollama_inkling_show
+
+- name: Pull Inkling weights
+  ansible.builtin.command:
+    argv: [ollama, pull, "{{ ollama_inkling_source }}"]
+  when: ollama_inkling_show.status == 404
+  async: 7200
+  poll: 15
+
+- name: Inspect the Eddie CPU model profile
   ansible.builtin.uri:
     url: http://127.0.0.1:11434/api/show
     method: POST
@@ -25,14 +42,25 @@
     body:
       model: "{{ ollama_inkling_model }}"
     status_code: [200, 404]
-  register: ollama_inkling_show
+  register: ollama_inkling_profile
 
-- name: Pull Inkling weights
-  ansible.builtin.command:
-    argv: [ollama, pull, "{{ ollama_inkling_model }}"]
-  when: ollama_inkling_show.status == 404
-  async: 7200
-  poll: 15
+- name: Configure Inkling to use the CPU and a 4K context
+  ansible.builtin.uri:
+    url: http://127.0.0.1:11434/api/create
+    method: POST
+    body_format: json
+    body:
+      model: "{{ ollama_inkling_model }}"
+      from: "{{ ollama_inkling_source }}"
+      stream: false
+      parameters:
+        num_ctx: 4096
+        num_gpu: 0
+  when: >-
+    ollama_inkling_show.status == 404 or ollama_inkling_profile.status == 404 or
+    not (ollama_inkling_profile.json.parameters | default('') is search('(?m)^num_gpu\s+0$')) or
+    not (ollama_inkling_profile.json.parameters | default('') is search('(?m)^num_ctx\s+4096$'))
+  changed_when: true
 
 - name: Verify Inkling generates text before enabling it in LibreChat
   ansible.builtin.uri:
@@ -47,7 +75,6 @@
       think: false
       keep_alive: 0
       options:
-        num_ctx: 4096
         num_predict: 256
         temperature: 0
   register: ollama_inkling_test
