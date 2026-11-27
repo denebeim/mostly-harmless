@@ -132,7 +132,8 @@ instance secrets together for backups.
 
 `eddie.yaml` installs and verifies Inkling before reconciling LibreChat.
 The Eddie VM profile allocates 28 GiB of RAM and a 64 GiB boot disk for
-this model. Inkling requires Ollama 0.40.18 or later. Its preset uses the
+this model. The playbook also grows Eddie's ext4 root partition and filesystem
+after a disk expansion. Inkling requires Ollama 0.40.18 or later. Its preset uses the
 CPU with a 4K context and an empty persona prompt. Eddie's Qwen preset
 remains the default. Run `eddie.yaml` first if an existing host still needs
 the model before reconciling LibreChat with `librechat.yaml` alone.

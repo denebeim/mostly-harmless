@@ -1,0 +1,13 @@
+---
+- name: Ensure guest root growth tools are installed
+  ansible.builtin.apt:
+    name: [cloud-guest-utils, e2fsprogs]
+    state: present
+    lock_timeout: 600
+
+- name: Expand the ext4 root partition and filesystem to use the resized disk
+  ansible.builtin.script:
+    cmd: "grow_root.sh {{ vm.disk | quote }}"
+    executable: /bin/bash
+  register: vm_root_growth
+  changed_when: "'ROOT_RESIZED' in vm_root_growth.stdout_lines"
