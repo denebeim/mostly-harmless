@@ -81,7 +81,7 @@
   vars:
     inkling_expected_reply: >-
       (?ix) ^
-      (?:(?: (?:the\s+)?answer(?:\s+is\b|\s*:) | it\s+is\b |
+      (?:(?: (?:the\s+)?answer(?:\s+is\b\s*:?|\s*:) | it\s+is\b |
       seven\s+times\s+eight\s+(?:is|equals)\b |
       7\s*[x×*]\s*8\s*(?:=|equals\b) )\s*)?
       (?:56|\*\*56\*\*)

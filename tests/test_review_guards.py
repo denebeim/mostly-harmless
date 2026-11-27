@@ -121,6 +121,7 @@ class PlaybookGuardTests(unittest.TestCase):
         failed = env.compile_expression(task['failed_when'])
         cases = [
             ('56', False), ('56.', False), (' The answer is **56**. ', False),
+            ('The answer is: 56', False), ('The answer is: 156', True),
             ('Seven times eight equals 56.', False), ('7 × 8 = 56', False),
             ('156', True), ('56.5', True), ('The answer is not 56.', True),
             ('I first thought 56, but the answer is 57.', True), ('', True),
