@@ -43,6 +43,9 @@
   retries: 12
   delay: 5
   until: ollama_api.status == 200
+- name: Prepare optional Inkling inference
+  ansible.builtin.include_tasks: inkling.yml
+  when: (ollama_enable_inkling | default(false) | bool) and not ansible_check_mode
 - name: Verify Ollama API over the LAN from the controller
   ansible.builtin.uri:
     url: http://{{ ansible_host | default(inventory_hostname) }}:11434/api/version
