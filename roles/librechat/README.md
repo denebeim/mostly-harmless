@@ -127,3 +127,12 @@ the web page from the controller. For acceptance, verify a permitted user
 can sign in and get an Ollama reply, a user outside the Authentik policy is
 denied, and local admin sign-in still works. Preserve MongoDB and the
 instance secrets together for backups.
+
+## Inkling 2 Mini
+
+`eddie.yaml` installs and verifies Inkling before reconciling LibreChat.
+The Eddie VM profile allocates 28 GiB of RAM and a 64 GiB boot disk for
+this model. Inkling requires Ollama 0.40.18 or later. Its preset uses the
+CPU with a 4K context and an empty persona prompt. Eddie's Qwen preset
+remains the default. Run `eddie.yaml` first if an existing host still needs
+the model before reconciling LibreChat with `librechat.yaml` alone.

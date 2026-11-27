@@ -215,7 +215,8 @@
             fetch('http://host.docker.internal:11434/v1/models')
             .then(r => { if (!r.ok) throw Error(r.status); return r.json(); })
             .then(r => { if (!r.data.some(model => model.id === process.argv[1])) process.exitCode = 1; })
-          - "{{ librechat_model }}"
+          - "{{ item }}"
         chdir: "{{ librechat_dir }}"
+      loop: "{{ [librechat_model, librechat_inkling_model] }}"
       changed_when: false
       when: not ansible_check_mode

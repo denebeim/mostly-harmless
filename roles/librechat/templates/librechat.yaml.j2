@@ -6,7 +6,7 @@ endpoints:
       apiKey: ollama
       baseURL: http://host.docker.internal:11434/v1/
       models:
-        default: ["{{ librechat_model }}"]
+        default: {{ [librechat_model, librechat_inkling_model] | to_json }}
         fetch: false
       titleConvo: false
       modelDisplayLabel: Ollama
@@ -30,4 +30,11 @@ modelSpecs:
       preset:
         endpoint: ollama
         model: "{{ librechat_model }}"
+        promptPrefix: ""
+    - name: inkling-2-mini
+      label: Inkling 2 Mini
+      showOnLanding: true
+      preset:
+        endpoint: ollama
+        model: "{{ librechat_inkling_model }}"
         promptPrefix: ""

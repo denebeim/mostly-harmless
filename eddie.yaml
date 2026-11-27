@@ -5,9 +5,10 @@
       name: "{{ eddie_host | default('eddie') }}"
       id: "{{ eddie_vm_id | default(314) | int }}"
       ip: "{{ eddie_ip | default('192.168.42.132') }}"
-      memory: 16384
+      # Keep the Inkling RAM allocation when reconciling Eddie's base profile.
+      memory: 28672
       cores: 8
-      disk: 40G
+      disk: 64G
       bios: ovmf
       machine: q35
       local_users: [hermes]
@@ -23,9 +24,13 @@
     hermes_base_url: http://127.0.0.1:11434/v1
     ollama_listen_host: 0.0.0.0
     ollama_verify_lan: true
+    ollama_inkling_source: inkling-2-mini:26b-a5b-iq4_NL
+    ollama_inkling_model: &inkling_model inkling-2-mini:eddie-cpu
     hermes_gpu_devices:
       - /dev/dri:/dev/dri
       - /dev/nvidia0:/dev/nvidia0
       - /dev/nvidiactl:/dev/nvidiactl
 
 - ansible.builtin.import_playbook: librechat.yaml
+  vars:
+    librechat_inkling_model: *inkling_model
